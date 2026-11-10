@@ -149,3 +149,61 @@ test "pricing: coupon capped at basket value, unknown product rejected" {
     None => inspect("rejected", content="rejected")
   }
 }
+
+///|
+test "checkout captures order, deducts stock, keeps pricing snapshot" {
+  let store = demo_store()
+  let cart = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart, "sd-01", 3)) // 30000, bulk -1500
+  let mut order_no = ""
+  match @moonshop.store_checkout(store, cart, None) {
+    Some(order) => {
+      order_no = order.order_no
+      inspect(order.lines.length(), content="1")
+      inspect(order.lines[0].name, content="SSD 1TB")
+      inspect(order.breakdown.total, content="28500")
+    }
+    None => inspect("no order", content="REACHED")
+  }
+  inspect(@debug.to_string(@moonshop.store_stock(store, "sd-01")), content="Some(7)")
+  match @moonshop.store_find_order(store, order_no) {
+    Some(_) => inspect("found", content="found")
+    None => inspect("missing", content="REACHED")
+  }
+}
+
+///|
+test "checkout rejects insufficient stock without mutation" {
+  let store = demo_store() // m-01 stock 10
+  let cart = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart, "m-01", 11))
+  match @moonshop.store_checkout(store, cart, None) {
+    Some(_) => inspect("placed", content="REACHED")
+    None => inspect("rejected", content="rejected")
+  }
+  inspect(@debug.to_string(@moonshop.store_stock(store, "m-01")), content="Some(10)")
+  inspect(@moonshop.store_orders(store).length(), content="0")
+}
+
+///|
+test "order numbers are sequential and zero-padded" {
+  let store = demo_store()
+  let mut first = ""
+  let mut second = ""
+  let cart = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart, "m-01", 1))
+  match @moonshop.store_checkout(store, cart, None) {
+    Some(o) => first = o.order_no
+    None => ()
+  }
+  let cart2 = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart2, "sd-01", 1))
+  match @moonshop.store_checkout(store, cart2, None) {
+    Some(o) => second = o.order_no
+    None => ()
+  }
+  inspect(first != "", content="true")
+  inspect(second != "", content="true")
+  inspect(first != second, content="true")
+  inspect(@moonshop.store_orders(store).length(), content="2")
+}

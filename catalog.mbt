@@ -12,17 +12,18 @@ pub struct InventoryItem {
 
 pub extend InventoryItem with @debug.Debug::{to_repr}
 
-/// The store aggregate: products with stock, and (later) placed orders.
+/// The store aggregate: products with stock, and placed orders.
 #derive(Debug)
 pub struct Store {
   items : Array[InventoryItem]
+  orders : Array[Order]
 }
 
 pub extend Store with @debug.Debug::{to_repr}
 
 /// Create an empty store.
 pub fn store_new() -> Store {
-  { items: [] }
+  { items: [], orders: [] }
 }
 
 /// Register a product with an initial stock level.

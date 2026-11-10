@@ -36,13 +36,19 @@ pub fn store_add_product(Store, Product, Int32) -> Unit
 
 pub fn store_categories(Store) -> Array[String]
 
+pub fn store_checkout(Store, Cart, Coupon?) -> Order?
+
 pub fn store_decrement(Store, String, Int32) -> Bool
 
 pub fn store_find(Store, String) -> Product?
 
+pub fn store_find_order(Store, String) -> Order?
+
 pub fn store_in_stock(Store, String, Int32) -> Bool
 
 pub fn store_new() -> Store
+
+pub fn store_orders(Store) -> Array[Order]
 
 pub fn store_search(Store, String) -> Array[Product]
 
@@ -80,6 +86,23 @@ pub struct InventoryItem {
 pub fn InventoryItem::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
+pub struct Order {
+  order_no : String
+  lines : Array[OrderLine]
+  breakdown : PriceBreakdown
+}
+pub fn Order::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub struct OrderLine {
+  product_id : String
+  name : String
+  unit_price_cents : Int32
+  qty : Int32
+}
+pub fn OrderLine::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
 pub struct PriceBreakdown {
   subtotal : Int32
   bulk_discount : Int32
@@ -102,6 +125,7 @@ pub fn Product::to_repr(Self) -> @debug.Repr
 #derive(@debug.Debug)
 pub struct Store {
   items : Array[InventoryItem]
+  orders : Array[Order]
 }
 pub fn Store::to_repr(Self) -> @debug.Repr
 
