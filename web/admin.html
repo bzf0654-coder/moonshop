@@ -16,9 +16,14 @@
   h2 { font-size: 1.1rem; margin: 0 0 14px; color: #334; }
   .top { display: flex; align-items: center; justify-content: space-between; }
   main {
-    display: grid; grid-template-columns: 1.3fr 1fr;
+    display: grid; grid-template-columns: 1.4fr 1fr 1fr;
     gap: 22px; margin-top: 18px;
   }
+  .npform { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .npform input { width: 100%; }
+  .npform button { grid-column: 1 / 3; background: #16a34a; border-color: #16a34a; color: #fff; }
+  .dl { color: #b91c1c; border-color: #e4b4b4; }
+  .dl:hover { background: #fde8e8; }
   section {
     background: #fff; border: 1px solid #e2e4ec; border-radius: 12px;
     padding: 20px; min-height: 320px;
@@ -70,6 +75,21 @@
         <thead><tr><th>商品</th><th class="num">库存</th><th class="num">单价</th><th></th></tr></thead>
         <tbody id="products"></tbody>
       </table>
+    </section>
+    <section>
+      <h2>上架新商品</h2>
+      <div class="npform">
+        <input id="np-name" placeholder="名称 *">
+        <input id="np-name-en" placeholder="英文名（选填）">
+        <input id="np-category" placeholder="类目 *（peripherals/storage/meetings）">
+        <input id="np-price" placeholder="单价(元) *，如 129.90">
+        <input id="np-stock" placeholder="初始库存 *" value="5">
+        <input id="np-id" placeholder="ID（选填，留空自动生成）">
+        <input id="np-desc" placeholder="介绍（选填）">
+        <input id="np-image" placeholder="图片URL（选填，留空用类目图标）">
+        <button id="np-btn">上架</button>
+        <div id="np-msg" class="hint"></div>
+      </div>
     </section>
     <section>
       <h2>订单流水</h2>

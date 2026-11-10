@@ -450,3 +450,33 @@ test "store_restock adds stock and rejects unknown ids" {
   inspect(@moonshop.store_restock(store, "ghost", 5), content="false")
   inspect(@moonshop.store_restock(store, "sd-01", 0), content="false")
 }
+
+///|
+test "desc/image round-trip, search and delist" {
+  let store = @moonshop.store_new()
+  let catalog = "[{\"id\":\"cam\",\"name\":\"高清摄像头\",\"desc\":\"2K 视频会议 支持夜景\",\"image\":\"https://img.example/cam.jpg\",\"category\":\"meetings\",\"price_cents\":32900,\"stock\":4}]"
+  inspect(@moonshop.store_import_json(store, catalog), content="1")
+  match @moonshop.store_find(store, "cam") {
+    Some(p) => {
+      inspect(p.desc, content="2K 视频会议 支持夜景")
+      inspect(p.image, content="https://img.example/cam.jpg")
+    }
+    None => inspect("missing", content="REACHED")
+  }
+  // search hits the description text
+  inspect(@moonshop.store_search(store, "夜景").length(), content="1")
+  // export/import preserves the fields
+  let store2 = @moonshop.store_new()
+  ignore(@moonshop.store_import_json(store2, @moonshop.catalog_export_json(store)))
+  match @moonshop.store_find(store2, "cam") {
+    Some(p) => inspect(p.image, content="https://img.example/cam.jpg")
+    None => inspect("missing", content="REACHED")
+  }
+  // delist removes it from the catalog; repeated delist fails
+  inspect(@moonshop.store_remove_product(store2, "cam"), content="true")
+  match @moonshop.store_find(store2, "cam") {
+    Some(_) => inspect("still there", content="REACHED")
+    None => inspect("gone", content="gone")
+  }
+  inspect(@moonshop.store_remove_product(store2, "cam"), content="false")
+}

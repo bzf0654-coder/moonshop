@@ -17,6 +17,8 @@ pub struct Product {
   name_en : String?
   category : String
   price_cents : Int
+  desc : String
+  image : String
 }
 
 pub extend Product with @debug.Debug::{to_repr}
@@ -28,9 +30,19 @@ pub fn product_new(
   name : String,
   category : String,
   price_cents : Int,
-  name_en? : String
+  name_en? : String,
+  desc? : String,
+  image? : String
 ) -> Product {
-  { id, name, name_en, category, price_cents }
+  let d = match desc {
+    Some(v) => v
+    None => ""
+  }
+  let img = match image {
+    Some(v) => v
+    None => ""
+  }
+  { id, name, name_en, category, price_cents, desc: d, image: img }
 }
 
 /// One line in a shopping cart: `qty` units of a product.

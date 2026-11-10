@@ -3,12 +3,12 @@
 // the MoonBit side, so the page keeps zero business JavaScript.
 
 let catalog_json = #|[
-                     #|  {"id":"kb-01","name":"机械键盘 87键","name_en":"Mech Keyboard 87","category":"peripherals","price_cents":49900,"stock":8},
-                     #|  {"id":"m-01","name":"无线鼠标","name_en":"Wireless Mouse","category":"peripherals","price_cents":7900,"stock":20},
-                     #|  {"id":"sd-01","name":"固态硬盘 1TB","name_en":"SSD 1TB NVMe","category":"storage","price_cents":45900,"stock":15},
-                     #|  {"id":"hd-01","name":"机械硬盘 4TB","name_en":"HDD 4TB","category":"storage","price_cents":59900,"stock":5},
-                     #|  {"id":"cam-01","name":"高清摄像头 2K","name_en":"Webcam 2K","category":"meetings","price_cents":32900,"stock":10},
-                     #|  {"id":"hub-01","name":"七合一扩展坞","name_en":"USB-C Hub 7in1","category":"meetings","price_cents":19900,"stock":2}
+                     #|  {"id":"kb-01","name":"机械键盘 87键","name_en":"Mech Keyboard 87","category":"peripherals","price_cents":49900,"stock":8,"desc":"热插拔轴体 87 键紧凑配列，白光背光"},
+                     #|  {"id":"m-01","name":"无线鼠标","name_en":"Wireless Mouse","category":"peripherals","price_cents":7900,"stock":20,"desc":"2.4G 双模静音微动，续航 18 个月"},
+                     #|  {"id":"sd-01","name":"固态硬盘 1TB","name_en":"SSD 1TB NVMe","category":"storage","price_cents":45900,"stock":15,"desc":"PCIe 4.0 读取 7000MB/s，五年质保"},
+                     #|  {"id":"hd-01","name":"机械硬盘 4TB","name_en":"HDD 4TB","category":"storage","price_cents":59900,"stock":5,"desc":"NAS 级 CMR 垂直记录，静音散热"},
+                     #|  {"id":"cam-01","name":"高清摄像头 2K","name_en":"Webcam 2K","category":"meetings","price_cents":32900,"stock":10,"desc":"2K 视频会议，支持夜景与自动对焦"},
+                     #|  {"id":"hub-01","name":"七合一扩展坞","name_en":"USB-C Hub 7in1","category":"meetings","price_cents":19900,"stock":2,"desc":"HDMI 4K + 100W PD 快充 + 三口 USB"}
                      #|]
 
 let store : @lib.Store = @lib.store_new()
@@ -165,6 +165,16 @@ fn category_label(c : String) -> String {
   }
 }
 
+/// Emoji avatar per category (fallback when a product has no image).
+fn category_emoji(c : String) -> String {
+  match c {
+    "peripherals" => "⌨️"
+    "storage" => "💽"
+    "meetings" => "🎥"
+    _ => "📦"
+  }
+}
+
 /// Localized product name: English mode prefers `name_en`, falling back
 /// to the canonical name; Chinese mode shows the canonical name.
 fn product_name(p : @lib.Product) -> String {
@@ -291,8 +301,19 @@ fn render_catalog() -> Unit {
   let buf = StringBuilder()
   for item in store.items {
     let p = item.product
+    let thumb = if p.image != "" {
+      "<img class=\"pimg\" src=\"" + p.image + "\" alt=\"\">"
+    } else {
+      "<div class=\"pemoji\">" + category_emoji(p.category) + "</div>"
+    }
+    let desc_line = if p.desc != "" {
+      "<div class=\"pdesc\">" + p.desc + "</div>"
+    } else {
+      ""
+    }
     buf.write_string(
-      "<div class=\"card\"><div><b>" + product_name(p) +
+      "<div class=\"card\"><div class=\"thumbwrap\">" + thumb +
+      "</div><div><b>" + product_name(p) +
       "</b><div class=\"cat\">" + category_label(p.category) +
       " · " + t("库存", "stock") + " " + item.stock.to_string() +
       (if item.stock <= 3 {
@@ -300,7 +321,8 @@ fn render_catalog() -> Unit {
        } else {
          ""
        }) +
-      "</div></div><div class=\"price\">" + @lib.format_cents(p.price_cents) +
+      "</div>" + desc_line +
+      "</div><div class=\"price\">" + @lib.format_cents(p.price_cents) +
       "</div><button class=\"add\" id=\"add-" + p.id + "\">" +
       t("+ 加入购物车", "+ Add to Cart") + "</button></div>",
     )

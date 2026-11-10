@@ -96,7 +96,7 @@ pub fn password_hash(String, String) -> String
 
 pub fn price_cart(Store, Cart, Coupon?, rebate? : Rebate, member_off_pct? : Int32) -> PriceBreakdown?
 
-pub fn product_new(String, String, String, Int32, name_en? : String) -> Product
+pub fn product_new(String, String, String, Int32, name_en? : String, desc? : String, image? : String) -> Product
 
 pub fn rebate_new(Int32, Int32) -> Rebate
 
@@ -137,6 +137,8 @@ pub fn store_new() -> Store
 pub fn store_orders(Store) -> Array[Order]
 
 pub fn store_release(Store, Int32) -> Bool
+
+pub fn store_remove_product(Store, String) -> Bool
 
 pub fn store_reserve(Store, String, Int32, Int32) -> Reservation?
 
@@ -236,6 +238,8 @@ pub struct Product {
   name_en : String?
   category : String
   price_cents : Int32
+  desc : String
+  image : String
 }
 pub fn Product::to_repr(Self) -> @debug.Repr
 

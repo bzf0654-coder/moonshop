@@ -64,12 +64,15 @@ fn render_products() -> Unit {
       ""
     }
     buf.write_string(
-      "<tr><td>" + p.name + "<div class=\"sub\">" + p.id + " · " +
-      p.category + "</div></td><td class=\"num\" id=\"stock-" + p.id + "\">" +
+      "<tr><td>" + category_emoji(p.category) + " " + p.name +
+      "<div class=\"sub\">" + p.id + " · " + p.category +
+      (if p.desc != "" { " · " + p.desc } else { "" }) +
+      "</div></td><td class=\"num\" id=\"stock-" + p.id + "\">" +
       item.stock.to_string() + low +
       "</td><td class=\"num\">" + @lib.format_cents(p.price_cents) +
       "</td><td class=\"num\"><button class=\"rs\" id=\"rs-" + p.id +
-      "\">补货</button></td></tr>",
+      "\">补货</button> <button class=\"dl\" id=\"dl-" + p.id +
+      "\">下架</button></td></tr>",
     )
   }
   @lib.get_el("products").set_html(buf.to_string())
@@ -79,6 +82,12 @@ fn render_products() -> Unit {
     btn.on_click(fn() {
       let qty_text = @lib.get_el("restock-qty").get_value()
       ignore(@lib.store_restock(store, id, parse_qty(qty_text)))
+      save_state()
+      render_products()
+    })
+    let dl = @lib.get_el("dl-" + id)
+    dl.on_click(fn() {
+      ignore(@lib.store_remove_product(store, id))
       save_state()
       render_products()
     })
@@ -108,6 +117,42 @@ fn render_ledger() -> Unit {
 
 /// Parse a restock quantity; anything invalid or non-positive falls
 /// back to the default batch of 5.
+/// Parse a yuan price like "129", "129.9", "129.99" into cents without
+/// any floating point.
+fn parse_price_cents(text : String) -> Int {
+  let mut yuan = 0
+  let mut fen = 0
+  let mut phase = 0
+  let mut fcount = 0
+  for _, ch in text {
+    if ch == '.' {
+      phase = 1
+    } else if ch >= '0' && ch <= '9' {
+      let d = ch.to_int() - '0'.to_int()
+      if phase == 0 {
+        yuan = yuan * 10 + d
+      } else if fcount < 2 {
+        fen = fen * 10 + d
+        fcount = fcount + 1
+      }
+    }
+  }
+  while fcount < 2 {
+    fen = fen * 10
+    fcount = fcount + 1
+  }
+  yuan * 100 + fen
+}
+
+fn category_emoji(c : String) -> String {
+  match c {
+    "peripherals" => "⌨️"
+    "storage" => "💽"
+    "meetings" => "🎥"
+    _ => "📦"
+  }
+}
+
 fn parse_qty(text : String) -> Int {
   let mut n = 0
   for _, ch in text {
@@ -163,6 +208,7 @@ fn render_gate() -> Unit {
       render_products()
       render_ledger()
       wire_admin_actions()
+      wire_new_product()
     }
     None => {
       @lib.get_el("gate").set_html(
@@ -190,6 +236,55 @@ fn render_gate() -> Unit {
       @lib.get_el("ledger").set_html("")
     }
   }
+}
+
+/// Create a product from the admin form; auto-generates an id from a
+/// content hash when the id box is left empty. Returns "" on success or
+/// an error message.
+fn create_product_from_form() -> String {
+  let name = @lib.get_el("np-name").get_value()
+  let name_en = @lib.get_el("np-name-en").get_value()
+  let category = @lib.get_el("np-category").get_value()
+  let price_text = @lib.get_el("np-price").get_value()
+  let stock_text = @lib.get_el("np-stock").get_value()
+  let desc = @lib.get_el("np-desc").get_value()
+  let image = @lib.get_el("np-image").get_value()
+  let mut id_text = @lib.get_el("np-id").get_value()
+  if name == "" || category == "" {
+    return "名称和类目必填"
+  }
+  let price = parse_price_cents(price_text)
+  if price <= 0 {
+    return "价格必须大于 0"
+  }
+  if id_text == "" {
+    id_text = @lib.sha256_hex(name + "|" + category)[0:8].to_owned()
+  }
+  match @lib.store_find(store, id_text) {
+    Some(_) => return "商品 ID 已存在：" + id_text
+    None => ()
+  }
+  let product = match name_en {
+    "" =>
+      @lib.product_new(id_text, name, category, price, desc=desc, image=image)
+    en =>
+      @lib.product_new(id_text, name, category, price, name_en=en, desc=desc, image=image)
+  }
+  @lib.store_add_product(store, product, parse_qty(stock_text))
+  save_state()
+  ""
+}
+
+fn wire_new_product() -> Unit {
+  @lib.get_el("np-btn").on_click(fn() {
+    let msg = create_product_from_form()
+    if msg == "" {
+      @lib.get_el("np-msg").set_html("✅ 已上架")
+      render_products()
+    } else {
+      @lib.get_el("np-msg").set_html("❌ " + msg)
+    }
+  })
 }
 
 fn run_admin() -> Unit {

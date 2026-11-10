@@ -21,6 +21,8 @@ pub fn store_import_json(store : Store, content : String) -> Int {
             let mut category = ""
             let mut price = 0
             let mut stock = 0
+            let mut desc = ""
+            let mut image = ""
             let mut ok = true
             for field in fields {
               match (field.0, field.1) {
@@ -30,6 +32,8 @@ pub fn store_import_json(store : Store, content : String) -> Int {
                 ("category", JString(v)) => category = v
                 ("price_cents", JNumber(v)) => price = v.to_int()
                 ("stock", JNumber(v)) => stock = v.to_int()
+                ("desc", JString(v)) => desc = v
+                ("image", JString(v)) => image = v
                 _ => ()
               }
             }
@@ -38,8 +42,9 @@ pub fn store_import_json(store : Store, content : String) -> Int {
             }
             if ok {
               let product = match name_en {
-                Some(en) => product_new(id, name, category, price, name_en=en)
-                None => product_new(id, name, category, price)
+                Some(en) =>
+                  product_new(id, name, category, price, name_en=en, desc=desc, image=image)
+                None => product_new(id, name, category, price, desc=desc, image=image)
               }
               store_add_product(store, product, stock)
               imported = imported + 1
@@ -124,6 +129,8 @@ pub fn catalog_export_json(store : Store) -> String {
           ("category", JString(item.product.category)),
           ("price_cents", JNumber(item.product.price_cents.to_double())),
           ("stock", JNumber(item.stock.to_double())),
+          ("desc", JString(item.product.desc)),
+          ("image", JString(item.product.image)),
         ],
       ),
     )

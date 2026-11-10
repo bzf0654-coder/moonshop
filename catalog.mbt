@@ -72,6 +72,18 @@ pub fn store_in_stock(store : Store, id : String, qty : Int) -> Bool {
   }
 }
 
+/// Delist a product: removes it from the catalog. Placed orders keep
+/// their snapshots. Returns false when the id is unknown.
+pub fn store_remove_product(store : Store, id : String) -> Bool {
+  for i, item in store.items {
+    if item.product.id == id {
+      ignore(store.items.remove(i))
+      return true
+    }
+  }
+  false
+}
+
 /// Add `qty` units to an existing product's stock (admin restock).
 /// Returns false when the product is unknown or qty is non-positive.
 pub fn store_restock(store : Store, id : String, qty : Int) -> Bool {
@@ -111,6 +123,7 @@ pub fn store_search(store : Store, text : String) -> Array[Product] {
   for item in store.items {
     if contains_ci(item.product.name, needle) ||
       contains_ci_opt(item.product.name_en, needle) ||
+      contains_ci(item.product.desc, needle) ||
       contains_ci(item.product.category, needle) {
       out.push(item.product)
     }
