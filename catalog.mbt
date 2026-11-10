@@ -12,18 +12,20 @@ pub struct InventoryItem {
 
 pub extend InventoryItem with @debug.Debug::{to_repr}
 
-/// The store aggregate: products with stock, and placed orders.
+/// The store aggregate: products with stock, active stock reservations
+/// and placed orders.
 #derive(Debug)
 pub struct Store {
   items : Array[InventoryItem]
   orders : Array[Order]
+  reservations : Array[Reservation]
 }
 
 pub extend Store with @debug.Debug::{to_repr}
 
 /// Create an empty store.
 pub fn store_new() -> Store {
-  { items: [], orders: [] }
+  { items: [], orders: [], reservations: [] }
 }
 
 /// Register a product with an initial stock level.
@@ -117,6 +119,115 @@ pub fn store_categories(store : Store) -> Array[String] {
     }
   }
   out
+}
+
+// ---------- stock reservations ----------
+
+/// A hold on `qty` units of a product until logical tick `expires_at`
+/// (inclusive). Reservations block normal checkouts; committing one
+/// converts the hold into a real deduction. Time is logical: callers
+/// advance the clock and call `store_sweep` to release expired holds.
+#derive(Debug)
+pub struct Reservation {
+  token : Int
+  product_id : String
+  qty : Int
+  expires_at : Int
+}
+
+pub extend Reservation with @debug.Debug::{to_repr}
+
+priv struct ReservationSeq {
+  mut n : Int
+}
+
+let reservation_seq : ReservationSeq = { n: 0 }
+
+fn reservation_active(r : Reservation, now : Int) -> Bool {
+  r.expires_at >= now
+}
+
+fn reserved_qty(store : Store, id : String, now : Int) -> Int {
+  let mut sum = 0
+  for r in store.reservations {
+    if r.product_id == id && reservation_active(r, now) {
+      sum = sum + r.qty
+    }
+  }
+  sum
+}
+
+/// Stock still sellable to normal checkouts: on-hand minus active holds.
+pub fn store_available(store : Store, id : String, now : Int) -> Int? {
+  match store_stock(store, id) {
+    Some(stock) => {
+      let held = reserved_qty(store, id, now)
+      if held > stock {
+        Some(0)
+      } else {
+        Some(stock - held)
+      }
+    }
+    None => None
+  }
+}
+
+/// Reserve `qty` units of a product until logical tick `expires_at`.
+/// Returns None on unknown product, non-positive qty, or qty exceeding
+/// the currently available stock.
+pub fn store_reserve(
+  store : Store,
+  id : String,
+  qty : Int,
+  expires_at : Int
+) -> Reservation? {
+  if qty <= 0 {
+    return None
+  }
+  match store_available(store, id, expires_at) {
+    Some(avail) =>
+      if avail >= qty {
+        reservation_seq.n = reservation_seq.n + 1
+        let r : Reservation = {
+          token: reservation_seq.n,
+          product_id: id,
+          qty,
+          expires_at,
+        }
+        store.reservations.push(r)
+        return Some(r)
+      }
+    None => ()
+  }
+  None
+}
+
+/// Cancel a reservation before it expires. Returns false when the token
+/// is unknown or already released.
+pub fn store_release(store : Store, token : Int) -> Bool {
+  for i, r in store.reservations {
+    if r.token == token {
+      ignore(store.reservations.remove(i))
+      return true
+    }
+  }
+  false
+}
+
+/// Release every reservation whose hold has expired at logical tick
+/// `now`. Returns the number of reservations released.
+pub fn store_sweep(store : Store, now : Int) -> Int {
+  let mut released = 0
+  let mut i = 0
+  while i < store.reservations.length() {
+    if !reservation_active(store.reservations[i], now) {
+      ignore(store.reservations.remove(i))
+      released = released + 1
+    } else {
+      i = i + 1
+    }
+  }
+  released
 }
 
 // ---------- tiny ascii case helpers (core-only) ----------

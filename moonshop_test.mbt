@@ -396,3 +396,48 @@ test "member stage and tiered shipping compose with the pipeline" {
     None => inspect("missing", content="REACHED")
   }
 }
+
+///|
+test "reservations block normal checkout and commit cleanly" {
+  let store = demo_store()
+  match @moonshop.store_reserve(store, "sd-01", 3, 100) {
+    Some(r) => {
+      inspect(@debug.to_string(@moonshop.store_available(store, "sd-01", 0)), content="Some(7)")
+      let cart8 = @moonshop.cart_new()
+      ignore(@moonshop.cart_add(cart8, "sd-01", 8))
+      match @moonshop.store_checkout(store, cart8, None) {
+        Some(_) => inspect("placed", content="REACHED")
+        None => inspect("blocked", content="blocked")
+      }
+      let cart3 = @moonshop.cart_new()
+      ignore(@moonshop.cart_add(cart3, "sd-01", 3))
+      match @moonshop.store_checkout_reserved(store, cart3, r, None) {
+        Some(_) => inspect("placed", content="placed")
+        None => inspect("failed", content="REACHED")
+      }
+      inspect(@debug.to_string(@moonshop.store_stock(store, "sd-01")), content="Some(7)")
+      inspect(@moonshop.store_orders(store).length(), content="1")
+      inspect(@debug.to_string(@moonshop.store_available(store, "sd-01", 0)), content="Some(7)")
+    }
+    None => inspect("reserve failed", content="REACHED")
+  }
+}
+
+///|
+test "expired reservations release on sweep and stop blocking" {
+  let store = demo_store()
+  match @moonshop.store_reserve(store, "m-01", 5, 10) {
+    Some(r) => {
+      inspect(@debug.to_string(@moonshop.store_available(store, "m-01", 5)), content="Some(5)")
+      inspect(@moonshop.store_sweep(store, 5), content="0")
+      inspect(@moonshop.store_sweep(store, 11), content="1")
+      inspect(@debug.to_string(@moonshop.store_available(store, "m-01", 0)), content="Some(10)")
+      inspect(@moonshop.store_release(store, r.token), content="false")
+    }
+    None => inspect("reserve failed", content="REACHED")
+  }
+  match @moonshop.store_reserve(store, "m-01", 11, 100) {
+    Some(_) => inspect("reserved", content="REACHED")
+    None => inspect("rejected", content="rejected")
+  }
+}

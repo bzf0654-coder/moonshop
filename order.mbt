@@ -54,12 +54,23 @@ pub fn store_checkout(
   cart : Cart,
   coupon : Coupon?,
   rebate? : Rebate,
-  member_off_pct? : Int
+  member_off_pct? : Int,
+  now? : Int
 ) -> Order? {
-  // validation pass — reject before mutating anything
+  // validation pass against *available* stock (on-hand minus active
+  // reservations) — reservations block normal checkouts; reject before
+  // mutating anything
   for line in cart.lines {
-    if !store_in_stock(store, line.product_id, line.qty) {
-      return None
+    let tick : Int = match now {
+      Some(t) => t
+      None => 0
+    }
+    match store_available(store, line.product_id, tick) {
+      Some(avail) =>
+        if avail < line.qty {
+          return None
+        }
+      None => return None
     }
   }
   match (match (rebate, member_off_pct) {
@@ -92,6 +103,71 @@ pub fn store_checkout(
           return None
         }
       }
+      let order : Order = { order_no: next_order_no(), lines, breakdown }
+      store.orders.push(order)
+      Some(order)
+    }
+    None => None
+  }
+}
+
+/// Commit a cart that holds `reservation`: the reserved units bypass the
+/// availability check (the hold already covers them; the reserved line
+/// must not exceed the reserved qty), other lines validate against
+/// available stock at `reservation.expires_at`. On success the hold is
+/// consumed; on failure it is left untouched.
+pub fn store_checkout_reserved(
+  store : Store,
+  cart : Cart,
+  reservation : Reservation,
+  coupon : Coupon?,
+  rebate? : Rebate,
+  member_off_pct? : Int
+) -> Order? {
+  for line in cart.lines {
+    if line.product_id == reservation.product_id {
+      if line.qty > reservation.qty {
+        return None
+      }
+    } else {
+      match store_available(store, line.product_id, reservation.expires_at) {
+        Some(avail) =>
+          if avail < line.qty {
+            return None
+          }
+        None => return None
+      }
+    }
+  }
+  match (match (rebate, member_off_pct) {
+    (Some(r), Some(pct)) => price_cart(store, cart, coupon, rebate=r, member_off_pct=pct)
+    (Some(r), None) => price_cart(store, cart, coupon, rebate=r)
+    (None, Some(pct)) => price_cart(store, cart, coupon, member_off_pct=pct)
+    (None, None) => price_cart(store, cart, coupon)
+  }) {
+    Some(breakdown) => {
+      let lines : Array[OrderLine] = []
+      for line in cart.lines {
+        match store_find(store, line.product_id) {
+          Some(product) =>
+            lines.push(
+              {
+                product_id: product.id,
+                name: product.name,
+                name_en: product.name_en,
+                unit_price_cents: product.price_cents,
+                qty: line.qty,
+              },
+            )
+          None => return None
+        }
+      }
+      for line in cart.lines {
+        if !store_decrement(store, line.product_id, line.qty) {
+          return None
+        }
+      }
+      ignore(store_release(store, reservation.token))
       let order : Order = { order_no: next_order_no(), lines, breakdown }
       store.orders.push(order)
       Some(order)
