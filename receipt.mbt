@@ -42,6 +42,9 @@ pub fn order_receipt(order : Order) -> String {
       format_cents(b.bulk_discount) + "\n",
     )
   }
+  if b.rebate_off > 0 {
+    buf.write_string("- rebate (满减): -" + format_cents(b.rebate_off) + "\n")
+  }
   match b.coupon_code {
     Some(code) =>
       buf.write_string(

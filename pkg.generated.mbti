@@ -26,6 +26,8 @@ pub fn cart_set_qty(Cart, String, Int32) -> Bool
 
 pub fn cart_total_qty(Cart) -> Int32
 
+pub fn catalog_export_json(Store) -> String
+
 pub fn coupon_new(String, Int32, Int32) -> Coupon
 
 pub fn format_cents(Int32) -> String
@@ -52,15 +54,19 @@ pub fn order_receipt(Order) -> String
 
 pub fn orders_export_json(Store) -> String
 
-pub fn price_cart(Store, Cart, Coupon?) -> PriceBreakdown?
+pub fn orders_import_json(Store, String) -> Int32
+
+pub fn price_cart(Store, Cart, Coupon?, rebate? : Rebate) -> PriceBreakdown?
 
 pub fn product_new(String, String, String, Int32, name_en? : String) -> Product
+
+pub fn rebate_new(Int32, Int32) -> Rebate
 
 pub fn store_add_product(Store, Product, Int32) -> Unit
 
 pub fn store_categories(Store) -> Array[String]
 
-pub fn store_checkout(Store, Cart, Coupon?) -> Order?
+pub fn store_checkout(Store, Cart, Coupon?, rebate? : Rebate) -> Order?
 
 pub fn store_decrement(Store, String, Int32) -> Bool
 
@@ -144,6 +150,7 @@ pub fn OrderLine::to_repr(Self) -> @debug.Repr
 pub struct PriceBreakdown {
   subtotal : Int32
   bulk_discount : Int32
+  rebate_off : Int32
   coupon_code : String?
   coupon_off : Int32
   shipping : Int32
@@ -160,6 +167,13 @@ pub struct Product {
   price_cents : Int32
 }
 pub fn Product::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub struct Rebate {
+  min_spend_cents : Int32
+  off_cents : Int32
+}
+pub fn Rebate::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
 pub struct Store {

@@ -296,3 +296,72 @@ test "name_en round-trips through import, search and order snapshot" {
   let exported = @moonshop.orders_export_json(store)
   inspect(exported.contains("\"name_en\":\"Mech Keyboard\""), content="true")
 }
+
+///|
+test "rebate applies above threshold before the coupon stage" {
+  let store = demo_store()
+  let cart = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart, "kb-01", 2)) // 99800
+  // rebate 满 ¥200 减 ¥50, coupon 满 ¥500 减 ¥20: both fire, order matters
+  let r = @moonshop.price_cart(
+    store,
+    cart,
+    Some(@moonshop.coupon_new("C20", 2000, 50000)),
+    rebate=@moonshop.rebate_new(20000, 5000),
+  )
+  match r {
+    Some(b) => {
+      inspect(b.rebate_off, content="5000")
+      inspect(b.coupon_off, content="2000")
+      inspect(b.total, content="92800")
+    }
+    None => inspect("missing", content="REACHED")
+  }
+  // below rebate threshold: nothing off, coupon still works alone
+  let small = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(small, "m-01", 3)) // 15000
+  match @moonshop.price_cart(
+    store,
+    small,
+    None,
+    rebate=@moonshop.rebate_new(20000, 5000),
+  ) {
+    Some(b) => {
+      inspect(b.rebate_off, content="0")
+      inspect(b.bulk_discount, content=(
+        #|750
+      ))
+      inspect(b.total, content=(
+        #|14250
+      ))
+    }
+    None => inspect("missing", content="REACHED")
+  }
+}
+
+///|
+test "catalog and orders round-trip through export/import" {
+  let store = @moonshop.store_new()
+  ignore(@moonshop.store_import_json(store, "[{\"id\":\"kb\",\"name\":\"机械键盘\",\"name_en\":\"Mech Keyboard\",\"category\":\"peripherals\",\"price_cents\":49900,\"stock\":7}]"))
+  let cart = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart, "kb", 2))
+  match @moonshop.store_checkout(store, cart, None) {
+    Some(_) => ()
+    None => inspect("no order", content="REACHED")
+  }
+  let items_json = @moonshop.catalog_export_json(store)
+  let orders_json = @moonshop.orders_export_json(store)
+  // restore into a fresh store
+  let store2 = @moonshop.store_new()
+  inspect(@moonshop.store_import_json(store2, items_json), content="1")
+  inspect(@moonshop.orders_import_json(store2, orders_json), content="1")
+  inspect(@debug.to_string(@moonshop.store_stock(store2, "kb")), content="Some(5)")
+  inspect(@moonshop.store_orders(store2).length(), content="1")
+  // sequence continues past the imported order
+  let cart2 = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart2, "kb", 1))
+  match @moonshop.store_checkout(store2, cart2, None) {
+    Some(o) => inspect(o.order_no != "MO-000001", content="true")
+    None => inspect("no order", content="REACHED")
+  }
+}

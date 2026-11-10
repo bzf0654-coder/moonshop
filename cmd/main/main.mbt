@@ -30,7 +30,8 @@ fn main {
   ignore(@lib.cart_add(cart, "sd-01", 3))
   ignore(@lib.cart_add(cart, "hub-01", 1))
   let coupon = @lib.coupon_new("SAVE5000", 5000, 100000)
-  match @lib.store_checkout(store, cart, Some(coupon)) {
+  let rebate = @lib.rebate_new(30000, 3000)
+  match @lib.store_checkout(store, cart, Some(coupon), rebate=rebate) {
     Some(order) => println(@lib.order_receipt(order))
     None => println("checkout failed")
   }

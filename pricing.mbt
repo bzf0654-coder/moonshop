@@ -19,8 +19,8 @@ pub const BULK_DISCOUNT_PCT : Int = 5
 ///|
 // ---------- coupon ----------
 
-/// A fixed-amount coupon usable when the (post-bulk) subtotal reaches
-/// `min_spend_cents`.
+/// A fixed-amount coupon usable when the (post-bulk, post-rebate) subtotal
+/// reaches `min_spend_cents`.
 #derive(Debug)
 pub struct Coupon {
   code : String
@@ -36,14 +36,36 @@ pub fn coupon_new(code : String, off_cents : Int, min_spend_cents : Int) -> Coup
 }
 
 ///|
+// ---------- rebate (满减) ----------
+
+/// An order-level threshold rebate: orders whose post-bulk subtotal
+/// reaches `min_spend_cents` earn a flat `off_cents` off (capped at the
+/// basket value). Applied before coupons.
+#derive(Debug)
+pub struct Rebate {
+  min_spend_cents : Int
+  off_cents : Int
+}
+
+pub extend Rebate with @debug.Debug::{to_repr}
+
+/// Construct a rebate: minimum spend (cents), amount off (cents).
+pub fn rebate_new(min_spend_cents : Int, off_cents : Int) -> Rebate {
+  { min_spend_cents, off_cents }
+}
+
+///|
 // ---------- price breakdown ----------
 
-/// The full pricing pipeline result. `total = subtotal - bulk_discount
-/// - coupon_off + shipping`, always >= 0.
+/// The full pricing pipeline result. Stages run in a fixed order:
+/// line totals -> bulk discount -> rebate (满减) -> coupon -> shipping.
+/// `total = subtotal - bulk_discount - rebate_off - coupon_off + shipping`,
+/// always >= 0.
 #derive(Debug)
 pub struct PriceBreakdown {
   subtotal : Int
   bulk_discount : Int
+  rebate_off : Int
   coupon_code : String?
   coupon_off : Int
   shipping : Int
@@ -57,7 +79,8 @@ pub extend PriceBreakdown with @debug.Debug::{to_repr}
 pub fn price_cart(
   store : Store,
   cart : Cart,
-  coupon : Coupon?
+  coupon : Coupon?,
+  rebate? : Rebate
 ) -> PriceBreakdown? {
   let mut subtotal = 0
   let mut bulk_discount = 0
@@ -74,21 +97,34 @@ pub fn price_cart(
     }
   }
   let after_bulk = subtotal - bulk_discount
-  // coupon: apply only when the threshold is met; cap at basket value
-  let mut coupon_code : String? = None
-  let mut coupon_off = 0
-  match coupon {
-    Some(c) =>
-      if after_bulk >= c.min_spend_cents {
-        coupon_code = Some(c.code)
-        coupon_off = c.off_cents
-        if coupon_off > after_bulk {
-          coupon_off = after_bulk
+  // rebate stage: threshold on the post-bulk subtotal, capped
+  let mut rebate_off = 0
+  match rebate {
+    Some(r) =>
+      if after_bulk >= r.min_spend_cents {
+        rebate_off = r.off_cents
+        if rebate_off > after_bulk {
+          rebate_off = after_bulk
         }
       }
     None => ()
   }
-  let after_coupon = after_bulk - coupon_off
+  let after_rebate = after_bulk - rebate_off
+  // coupon stage: threshold on the post-rebate subtotal, capped
+  let mut coupon_code : String? = None
+  let mut coupon_off = 0
+  match coupon {
+    Some(c) =>
+      if after_rebate >= c.min_spend_cents {
+        coupon_code = Some(c.code)
+        coupon_off = c.off_cents
+        if coupon_off > after_rebate {
+          coupon_off = after_rebate
+        }
+      }
+    None => ()
+  }
+  let after_coupon = after_rebate - coupon_off
   let shipping = if after_coupon >= FREE_SHIPPING_THRESHOLD_CENTS {
     0
   } else {
@@ -98,6 +134,7 @@ pub fn price_cart(
     {
       subtotal,
       bulk_discount,
+      rebate_off,
       coupon_code,
       coupon_off,
       shipping,

@@ -52,7 +52,8 @@ fn next_order_no() -> String {
 pub fn store_checkout(
   store : Store,
   cart : Cart,
-  coupon : Coupon?
+  coupon : Coupon?,
+  rebate? : Rebate
 ) -> Order? {
   // validation pass — reject before mutating anything
   for line in cart.lines {
@@ -60,7 +61,10 @@ pub fn store_checkout(
       return None
     }
   }
-  match price_cart(store, cart, coupon) {
+  match (match rebate {
+    Some(r) => price_cart(store, cart, coupon, rebate=r)
+    None => price_cart(store, cart, coupon)
+  }) {
     Some(breakdown) => {
       // capture snapshot lines
       let lines : Array[OrderLine] = []

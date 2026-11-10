@@ -17,11 +17,12 @@ let cart : @lib.Cart = @lib.cart_new()
 
 priv struct WebState {
   mut coupon_on : Bool
+  mut rebate_on : Bool
   mut zh : Bool
   mut last_order : @lib.Order?
 }
 
-let state : WebState = { coupon_on: true, zh: true, last_order: None }
+let state : WebState = { coupon_on: true, rebate_on: true, zh: true, last_order: None }
 
 /// Current-language text picker.
 fn t(zh : String, en : String) -> String {
@@ -77,6 +78,14 @@ fn coupon_now() -> @lib.Coupon? {
   }
 }
 
+fn rebate_now() -> @lib.Rebate? {
+  if state.rebate_on {
+    Some(@lib.rebate_new(30000, 3000))
+  } else {
+    None
+  }
+}
+
 ///|
 // ---------- rendering ----------
 
@@ -90,6 +99,17 @@ fn render_coupon_label() -> Unit {
     t(
       "优惠券 SAVE5000（满 ¥1000 减 ¥50）：" + status,
       "Coupon SAVE5000 (¥50 off over ¥1000): " + status,
+    ),
+  )
+  let rstatus = if state.rebate_on {
+    t("参加中", "joined")
+  } else {
+    t("未参加", "off")
+  }
+  get_el("rebate").set_html(
+    t(
+      "满减活动（满 ¥300 减 ¥30）：" + rstatus,
+      "Rebate (¥30 off over ¥300): " + rstatus,
     ),
   )
 }
@@ -160,6 +180,12 @@ fn append_totals(buf : StringBuilder) -> Unit {
         (if b.bulk_discount > 0 {
            "<br/>" + t("批发折扣", "Bulk discount") + " −" +
            @lib.format_cents(b.bulk_discount)
+         } else {
+           ""
+         }) +
+        (if b.rebate_off > 0 {
+           "<br/>" + t("满减", "Rebate") + " −" +
+           @lib.format_cents(b.rebate_off)
          } else {
            ""
          }) +
@@ -246,6 +272,11 @@ fn render_receipt(order : @lib.Order) -> Unit {
       @lib.format_cents(b.bulk_discount) + "<br/>",
     )
   }
+  if b.rebate_off > 0 {
+    buf.write_string(
+      t("满减", "Rebate") + " −" + @lib.format_cents(b.rebate_off) + "<br/>",
+    )
+  }
   if b.coupon_off > 0 {
     buf.write_string(
       t("优惠券", "Coupon") + " −" + @lib.format_cents(b.coupon_off) + "<br/>",
@@ -296,8 +327,17 @@ fn run() -> Unit {
     render_coupon_label()
     render_cart()
   })
+  get_el("rebate").on_click(fn() {
+    state.rebate_on = !state.rebate_on
+    render_coupon_label()
+    render_cart()
+  })
   get_el("checkout").on_click(fn() {
-    match @lib.store_checkout(store, cart, coupon_now()) {
+    let placed = match rebate_now() {
+      Some(r) => @lib.store_checkout(store, cart, coupon_now(), rebate=r)
+      None => @lib.store_checkout(store, cart, coupon_now())
+    }
+    match placed {
       Some(order) => {
         // clear the cart: set every line to zero
         let ids : Array[String] = []
