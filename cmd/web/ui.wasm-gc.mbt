@@ -51,3 +51,28 @@ fn El::set_html(self : El, html : String) -> Unit {
 }
 
 fn El::on_click(self : El, cb : () -> Unit) -> Unit = "dom" "on_click"
+
+// localStorage persistence (wasm-gc backend): strings cross the boundary
+// as code-point arrays (snake-example pattern); empty array = missing.
+fn JsArray::iter(self : JsArray, f : (Int) -> Unit) -> Unit = "array" "iter"
+
+fn storage_get(key : String) -> String {
+  let points = storage_get_ffi(JsString::from_string(key))
+  let buf = StringBuilder()
+  points.iter(fn(i) { buf.write_char(i.unsafe_to_char()) })
+  buf.to_string()
+}
+
+fn storage_get_ffi(key : JsString) -> JsArray = "storage" "get"
+
+fn storage_set(key : String, value : String) -> Unit {
+  storage_set_ffi(JsString::from_string(key), JsString::from_string(value))
+}
+
+fn storage_set_ffi(key : JsString, value : JsString) -> Unit = "storage" "set"
+
+fn storage_del(key : String) -> Unit {
+  storage_del_ffi(JsString::from_string(key))
+}
+
+fn storage_del_ffi(key : JsString) -> Unit = "storage" "del"

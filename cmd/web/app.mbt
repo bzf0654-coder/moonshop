@@ -87,6 +87,44 @@ fn rebate_now() -> @lib.Rebate? {
 }
 
 ///|
+// ---------- localStorage persistence ----------
+
+const ITEMS_KEY : String = "moonshop.items"
+
+const ORDERS_KEY : String = "moonshop.orders"
+
+fn save_state() -> Unit {
+  storage_set(ITEMS_KEY, @lib.catalog_export_json(store))
+  storage_set(ORDERS_KEY, @lib.orders_export_json(store))
+}
+
+/// Restore catalog + order history saved by a previous session; falls
+/// back to the built-in demo catalog on first run.
+fn restore_or_seed() -> Unit {
+  let saved_items = storage_get(ITEMS_KEY)
+  if saved_items != "" {
+    ignore(@lib.store_import_json(store, saved_items))
+    let saved_orders = storage_get(ORDERS_KEY)
+    if saved_orders != "" {
+      ignore(@lib.orders_import_json(store, saved_orders))
+    }
+  } else {
+    ignore(@lib.store_import_json(store, catalog_json))
+  }
+}
+
+fn reset_demo() -> Unit {
+  storage_del(ITEMS_KEY)
+  storage_del(ORDERS_KEY)
+  store.items.clear()
+  store.orders.clear()
+  state.coupon_on = true
+  state.rebate_on = true
+  state.last_order = None
+  ignore(@lib.store_import_json(store, catalog_json))
+}
+
+///|
 // ---------- rendering ----------
 
 fn render_coupon_label() -> Unit {
@@ -139,6 +177,11 @@ fn render_catalog() -> Unit {
       "<div class=\"card\"><div><b>" + product_name(p) +
       "</b><div class=\"cat\">" + category_label(p.category) +
       " · " + t("库存", "stock") + " " + item.stock.to_string() +
+      (if item.stock <= 3 {
+         "<span class=\"low\"> · " + t("仅剩", "only") + " " + item.stock.to_string() + "</span>"
+       } else {
+         ""
+       }) +
       "</div></div><div class=\"price\">" + @lib.format_cents(p.price_cents) +
       "</div><button class=\"add\" id=\"add-" + p.id + "\">" +
       t("+ 加入购物车", "+ Add to Cart") + "</button></div>",
@@ -310,13 +353,25 @@ fn render_receipt_view() -> Unit {
 // ---------- entry ----------
 
 fn run() -> Unit {
-  ignore(@lib.store_import_json(store, catalog_json))
+  restore_or_seed()
+  // replay the most recent order into the receipt panel after a restore
+  let n = store.orders.length()
+  if n > 0 {
+    state.last_order = Some(store.orders[n - 1])
+  }
   render_shell()
   render_catalog()
   render_cart()
   render_receipt_view()
   get_el("lang").on_click(fn() {
     state.zh = !state.zh
+    render_shell()
+    render_catalog()
+    render_cart()
+    render_receipt_view()
+  })
+  get_el("reset").on_click(fn() {
+    reset_demo()
     render_shell()
     render_catalog()
     render_cart()
@@ -348,6 +403,7 @@ fn run() -> Unit {
           ignore(@lib.cart_set_qty(cart, id, 0))
         }
         state.last_order = Some(order)
+        save_state()
         render_receipt_view()
         render_catalog()
         render_cart()

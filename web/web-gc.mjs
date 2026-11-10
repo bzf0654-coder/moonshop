@@ -31,6 +31,24 @@ const importObject = {
   array: {
     new: () => [],
     push: (array, value) => { array.push(value); },
+    iter: (arr, cb) => arr.forEach(cb),
+  },
+  storage: {
+    // k/v arrive as real JS strings (MoonBit JsString on wasm-gc IS a
+    // JS string created via string.fromCodePoint); get returns a
+    // code-point array (empty when missing) per the snake pattern.
+    get: (k) => {
+      try {
+        const v = localStorage.getItem(k);
+        return v === null ? [] : Array.from(v, (c) => c.codePointAt(0) || 0);
+      } catch (e) { return []; }
+    },
+    set: (k, v) => {
+      try { localStorage.setItem(k, v); } catch (e) { /* quota — ignore */ }
+    },
+    del: (k) => {
+      try { localStorage.removeItem(k); } catch (e) {}
+    },
   },
   string: {
     fromCodePoint: (points) => String.fromCodePoint(...points),
