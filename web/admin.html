@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>moonshop 管理台</title>
+<style>
+  :root { font-size: 19px; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 32px;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    background: #f5f6fa; color: #222;
+  }
+  h1 { font-size: 1.5rem; margin: 0; }
+  h2 { font-size: 1.1rem; margin: 0 0 14px; color: #334; }
+  .top { display: flex; align-items: center; justify-content: space-between; }
+  main {
+    display: grid; grid-template-columns: 1.3fr 1fr;
+    gap: 22px; margin-top: 18px;
+  }
+  section {
+    background: #fff; border: 1px solid #e2e4ec; border-radius: 12px;
+    padding: 20px; min-height: 320px;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 9px 6px; border-bottom: 1px solid #eceef5; }
+  th { color: #667; font-weight: 600; }
+  td.num, th.num { text-align: right; }
+  .sub { color: #889; font-size: 0.8rem; margin-top: 2px; }
+  .low { color: #dc2626; font-weight: 700; }
+  .empty { color: #99a; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 9px;
+    border: 1px solid #c8cddd; background: #f0f2f8; padding: 6px 13px;
+  }
+  button:hover { background: #e4e8f4; }
+  #restock-btn { background: #2563eb; border-color: #2563eb; color: #fff; }
+  #reset { color: #667; }
+  input {
+    font: inherit; padding: 6px 10px; border-radius: 9px;
+    border: 1px solid #c8cddd; width: 90px;
+  }
+  .bar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+  a { color: #2563eb; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>🛠 moonshop 管理台 <span style="font-size:0.9rem;color:#889">与商店共享同一份 MoonBit 引擎与数据</span></h1>
+    <a href="/web/">← 返回商店</a>
+  </div>
+  <main>
+    <section>
+      <h2>商品库存</h2>
+      <div class="bar">
+        <label>补货数量 <input id="restock-qty" type="number" value="5"></label>
+        <button id="restock-btn">全部补货</button>
+        <button id="reset">重置演示数据</button>
+      </div>
+      <table>
+        <thead><tr><th>商品</th><th class="num">库存</th><th class="num">单价</th><th></th></tr></thead>
+        <tbody id="products"></tbody>
+      </table>
+    </section>
+    <section>
+      <h2>订单流水</h2>
+      <table>
+        <thead><tr><th>单号</th><th class="num">品种</th><th class="num">件数</th><th class="num">实付</th></tr></thead>
+        <tbody id="ledger"></tbody>
+      </table>
+    </section>
+  </main>
+  <script type="module">
+    const badge = document.querySelector(".top span");
+    try {
+      await import("./admin-gc.mjs");
+      badge.textContent += " · wasm-gc";
+    } catch (e) {
+      console.warn("wasm-gc unavailable, falling back to the js backend:", e);
+      const s = document.createElement("script");
+      s.src = "./admin.js";
+      document.body.appendChild(s);
+      badge.textContent += " · js 后端";
+    }
+  </script>
+</body>
+</html>

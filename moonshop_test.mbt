@@ -441,3 +441,12 @@ test "expired reservations release on sweep and stop blocking" {
     None => inspect("rejected", content="rejected")
   }
 }
+
+///|
+test "store_restock adds stock and rejects unknown ids" {
+  let store = demo_store()
+  inspect(@moonshop.store_restock(store, "sd-01", 5), content="true")
+  inspect(@debug.to_string(@moonshop.store_stock(store, "sd-01")), content="Some(15)")
+  inspect(@moonshop.store_restock(store, "ghost", 5), content="false")
+  inspect(@moonshop.store_restock(store, "sd-01", 0), content="false")
+}

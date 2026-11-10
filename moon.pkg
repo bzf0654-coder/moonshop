@@ -2,3 +2,10 @@ import {
   "moonbitlang/core/debug" @debug,
   "moonbitlang/core/string" @string,
 }
+
+options(
+  targets: {
+    "ui.js.mbt": [ "js" ],
+    "ui.wasm-gc.mbt": [ "wasm-gc" ],
+  },
+)

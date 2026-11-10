@@ -24,6 +24,7 @@ const importObject = {
     get_el: (id) => document.getElementById(id),
     set_html: (el, html) => { el.innerHTML = html; },
     on_click: (el, cb) => { el.onclick = () => cb(); },
+    get_value: (el) => el.value,
   },
   spectest: {
     print_char: log,

@@ -7,3 +7,5 @@ target
 web/web.js
 
 web/web.wasm
+web/admin.wasm
+web/admin.js

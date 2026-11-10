@@ -94,17 +94,17 @@ const ITEMS_KEY : String = "moonshop.items"
 const ORDERS_KEY : String = "moonshop.orders"
 
 fn save_state() -> Unit {
-  storage_set(ITEMS_KEY, @lib.catalog_export_json(store))
-  storage_set(ORDERS_KEY, @lib.orders_export_json(store))
+  @lib.storage_set(ITEMS_KEY, @lib.catalog_export_json(store))
+  @lib.storage_set(ORDERS_KEY, @lib.orders_export_json(store))
 }
 
 /// Restore catalog + order history saved by a previous session; falls
 /// back to the built-in demo catalog on first run.
 fn restore_or_seed() -> Unit {
-  let saved_items = storage_get(ITEMS_KEY)
+  let saved_items = @lib.storage_get(ITEMS_KEY)
   if saved_items != "" {
     ignore(@lib.store_import_json(store, saved_items))
-    let saved_orders = storage_get(ORDERS_KEY)
+    let saved_orders = @lib.storage_get(ORDERS_KEY)
     if saved_orders != "" {
       ignore(@lib.orders_import_json(store, saved_orders))
     }
@@ -114,8 +114,8 @@ fn restore_or_seed() -> Unit {
 }
 
 fn reset_demo() -> Unit {
-  storage_del(ITEMS_KEY)
-  storage_del(ORDERS_KEY)
+  @lib.storage_del(ITEMS_KEY)
+  @lib.storage_del(ORDERS_KEY)
   store.items.clear()
   store.orders.clear()
   state.coupon_on = true
@@ -133,7 +133,7 @@ fn render_coupon_label() -> Unit {
   } else {
     t("已停用", "OFF")
   }
-  get_el("coupon").set_html(
+  @lib.get_el("coupon").set_html(
     t(
       "优惠券 SAVE5000（满 ¥1000 减 ¥50）：" + status,
       "Coupon SAVE5000 (¥50 off over ¥1000): " + status,
@@ -144,7 +144,7 @@ fn render_coupon_label() -> Unit {
   } else {
     t("未参加", "off")
   }
-  get_el("rebate").set_html(
+  @lib.get_el("rebate").set_html(
     t(
       "满减活动（满 ¥300 减 ¥30）：" + rstatus,
       "Rebate (¥30 off over ¥300): " + rstatus,
@@ -155,17 +155,17 @@ fn render_coupon_label() -> Unit {
 /// Static shell texts (headings, buttons, subtitle) — re-rendered by
 /// MoonBit so the language toggle covers the whole page.
 fn render_shell() -> Unit {
-  get_el("subtitle").set_html(
+  @lib.get_el("subtitle").set_html(
     t(
       "纯 MoonBit 电商领域引擎（目录 / 库存 / 定价 / 结账 / 订单）——本页业务逻辑零 JavaScript。",
       "A pure-MoonBit e-commerce domain engine (catalog / inventory / pricing / checkout / orders) — zero business JavaScript on this page.",
     ),
   )
-  get_el("h-catalog").set_html(t("商品目录", "Catalog"))
-  get_el("h-cart").set_html(t("购物车", "Shopping Cart"))
-  get_el("h-receipt").set_html(t("订单小票", "Receipt"))
-  get_el("checkout").set_html(t("结账 Checkout", "Checkout"))
-  get_el("lang").set_html(if state.zh { "EN" } else { "中文" })
+  @lib.get_el("h-catalog").set_html(t("商品目录", "Catalog"))
+  @lib.get_el("h-cart").set_html(t("购物车", "Shopping Cart"))
+  @lib.get_el("h-receipt").set_html(t("订单小票", "Receipt"))
+  @lib.get_el("checkout").set_html(t("结账 Checkout", "Checkout"))
+  @lib.get_el("lang").set_html(if state.zh { "EN" } else { "中文" })
   render_coupon_label()
 }
 
@@ -187,10 +187,10 @@ fn render_catalog() -> Unit {
       t("+ 加入购物车", "+ Add to Cart") + "</button></div>",
     )
   }
-  get_el("catalog").set_html(buf.to_string())
+  @lib.get_el("catalog").set_html(buf.to_string())
   for item in store.items {
     let id = item.product.id
-    let btn = get_el("add-" + id)
+    let btn = @lib.get_el("add-" + id)
     btn.on_click(fn() {
       ignore(@lib.cart_add(cart, id, 1))
       render_cart()
@@ -278,10 +278,10 @@ fn render_cart() -> Unit {
   if cart.lines.length() > 0 {
     append_totals(buf)
   }
-  get_el("cart").set_html(buf.to_string())
+  @lib.get_el("cart").set_html(buf.to_string())
   for line in cart.lines {
     let id = line.product_id
-    let btn = get_el("rm-" + id)
+    let btn = @lib.get_el("rm-" + id)
     btn.on_click(fn() {
       let q = cart_qty(id)
       ignore(@lib.cart_set_qty(cart, id, q - 1))
@@ -341,13 +341,13 @@ fn render_receipt(order : @lib.Order) -> Unit {
     "<br/><b>" + t("合计", "Total") + " " + @lib.format_cents(b.total) +
     "</b></div>",
   )
-  get_el("receipt").set_html(buf.to_string())
+  @lib.get_el("receipt").set_html(buf.to_string())
 }
 
 fn render_receipt_view() -> Unit {
   match state.last_order {
     Some(order) => render_receipt(order)
-    None => get_el("receipt").set_html(
+    None => @lib.get_el("receipt").set_html(
       "<div class=\"empty\">" +
       t("下单后这里显示小票", "The receipt appears here after checkout") +
       "</div>",
@@ -369,31 +369,31 @@ fn run() -> Unit {
   render_catalog()
   render_cart()
   render_receipt_view()
-  get_el("lang").on_click(fn() {
+  @lib.get_el("lang").on_click(fn() {
     state.zh = !state.zh
     render_shell()
     render_catalog()
     render_cart()
     render_receipt_view()
   })
-  get_el("reset").on_click(fn() {
+  @lib.get_el("reset").on_click(fn() {
     reset_demo()
     render_shell()
     render_catalog()
     render_cart()
     render_receipt_view()
   })
-  get_el("coupon").on_click(fn() {
+  @lib.get_el("coupon").on_click(fn() {
     state.coupon_on = !state.coupon_on
     render_coupon_label()
     render_cart()
   })
-  get_el("rebate").on_click(fn() {
+  @lib.get_el("rebate").on_click(fn() {
     state.rebate_on = !state.rebate_on
     render_coupon_label()
     render_cart()
   })
-  get_el("checkout").on_click(fn() {
+  @lib.get_el("checkout").on_click(fn() {
     let placed = match rebate_now() {
       Some(r) => @lib.store_checkout(store, cart, coupon_now(), rebate=r)
       None => @lib.store_checkout(store, cart, coupon_now())
@@ -414,7 +414,7 @@ fn run() -> Unit {
         render_catalog()
         render_cart()
       }
-      None => get_el("receipt").set_html(
+      None => @lib.get_el("receipt").set_html(
         "<div class=\"fail\">" +
         t(
           "下单失败：库存不足，商店未被修改",

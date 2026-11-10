@@ -104,6 +104,8 @@ pub fn store_release(Store, Int32) -> Bool
 
 pub fn store_reserve(Store, String, Int32, Int32) -> Reservation?
 
+pub fn store_restock(Store, String, Int32) -> Bool
+
 pub fn store_search(Store, String) -> Array[Product]
 
 pub fn store_stock(Store, String) -> Int32?

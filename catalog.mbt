@@ -72,6 +72,21 @@ pub fn store_in_stock(store : Store, id : String, qty : Int) -> Bool {
   }
 }
 
+/// Add `qty` units to an existing product's stock (admin restock).
+/// Returns false when the product is unknown or qty is non-positive.
+pub fn store_restock(store : Store, id : String, qty : Int) -> Bool {
+  if qty <= 0 {
+    return false
+  }
+  for item in store.items {
+    if item.product.id == id {
+      item.stock = item.stock + qty
+      return true
+    }
+  }
+  false
+}
+
 /// Subtract `qty` from a product's stock. Returns false when stock would go
 /// negative or the product is unknown. The caller validates first at
 /// checkout; this is the safety net.
