@@ -28,6 +28,24 @@ pub fn cart_total_qty(Cart) -> Int32
 
 pub fn coupon_new(String, Int32, Int32) -> Coupon
 
+pub fn json_as_array(JsonValue) -> Array[JsonValue]?
+
+pub fn json_as_bool(JsonValue) -> Bool?
+
+pub fn json_as_double(JsonValue) -> Double?
+
+pub fn json_as_string(JsonValue) -> String?
+
+pub fn json_get(JsonValue, String) -> JsonValue?
+
+pub fn json_get_double(JsonValue, String) -> Double?
+
+pub fn json_parse(String) -> JsonValue
+
+pub fn json_serialize(JsonValue) -> String
+
+pub fn orders_export_json(Store) -> String
+
 pub fn price_cart(Store, Cart, Coupon?) -> PriceBreakdown?
 
 pub fn product_new(String, String, String, Int32) -> Product
@@ -43,6 +61,8 @@ pub fn store_decrement(Store, String, Int32) -> Bool
 pub fn store_find(Store, String) -> Product?
 
 pub fn store_find_order(Store, String) -> Order?
+
+pub fn store_import_json(Store, String) -> Int32
 
 pub fn store_in_stock(Store, String, Int32) -> Bool
 
@@ -84,6 +104,17 @@ pub struct InventoryItem {
   mut stock : Int32
 }
 pub fn InventoryItem::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub enum JsonValue {
+  JNull
+  JBool(Bool)
+  JNumber(Double)
+  JString(String)
+  JArray(Array[JsonValue])
+  JObject(Array[(String, JsonValue)])
+}
+pub fn JsonValue::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
 pub struct Order {

@@ -207,3 +207,33 @@ test "order numbers are sequential and zero-padded" {
   inspect(first != second, content="true")
   inspect(@moonshop.store_orders(store).length(), content="2")
 }
+
+///|
+test "catalog import from JSON skips malformed entries" {
+  let store = @moonshop.store_new()
+  let catalog = "[{\"id\":\"kb-01\",\"name\":\"Mech Keyboard\",\"category\":\"peripherals\",\"price_cents\":49900,\"stock\":10},{\"id\":\"m-01\",\"name\":\"Mouse\",\"category\":\"peripherals\",\"price_cents\":5000,\"stock\":10},{\"id\":\"bad\",\"name\":\"No price\",\"category\":\"x\"}]"
+  let imported = @moonshop.store_import_json(store, catalog)
+  inspect(imported, content="2")
+  inspect(@debug.to_string(@moonshop.store_stock(store, "kb-01")), content="Some(10)")
+  inspect(@moonshop.store_search(store, "mouse").length(), content="1")
+}
+
+///|
+test "orders export round-trips as a JSON array" {
+  let store = @moonshop.store_new()
+  ignore(@moonshop.store_import_json(store, "[{\"id\":\"sd-01\",\"name\":\"SSD 1TB\",\"category\":\"storage\",\"price_cents\":10000,\"stock\":5}]"))
+  let cart = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart, "sd-01", 3))
+  match @moonshop.store_checkout(store, cart, None) {
+    Some(_) => ()
+    None => inspect("no order", content="REACHED")
+  }
+  let json = @moonshop.orders_export_json(store)
+  inspect(json.contains("\"order_no\":\"MO-"), content="true")
+  inspect(json.contains("\"name\":\"SSD 1TB\""), content="true")
+  inspect(json.contains("\"total\":28500"), content="true")
+  match @moonshop.json_parse(json) {
+    JArray(items) => inspect(items.length(), content="1")
+    _ => inspect("not array", content="REACHED")
+  }
+}
