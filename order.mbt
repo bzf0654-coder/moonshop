@@ -3,11 +3,14 @@
 ///|
 // ---------- order model ----------
 
-/// A snapshot line in a placed order: price captured at purchase time.
+/// A snapshot line in a placed order: price and names captured at
+/// purchase time (canonical + optional English name for localized
+/// receipt re-rendering).
 #derive(Debug)
 pub struct OrderLine {
   product_id : String
   name : String
+  name_en : String?
   unit_price_cents : Int
   qty : Int
 }
@@ -68,6 +71,7 @@ pub fn store_checkout(
               {
                 product_id: product.id,
                 name: product.name,
+                name_en: product.name_en,
                 unit_price_cents: product.price_cents,
                 qty: line.qty,
               },

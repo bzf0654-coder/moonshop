@@ -86,13 +86,14 @@ pub fn store_decrement(store : Store, id : String, qty : Int) -> Bool {
   false
 }
 
-/// Case-insensitive substring search across name and category,
-/// returning matching products in catalog order.
+/// Case-insensitive substring search across canonical name, English name
+/// and category, returning matching products in catalog order.
 pub fn store_search(store : Store, text : String) -> Array[Product] {
   let needle = to_lower(text)
   let out : Array[Product] = []
   for item in store.items {
     if contains_ci(item.product.name, needle) ||
+      contains_ci_opt(item.product.name_en, needle) ||
       contains_ci(item.product.category, needle) {
       out.push(item.product)
     }
@@ -145,6 +146,13 @@ fn to_lower(s : String) -> String {
     }
   }
   buf.to_string()
+}
+
+fn contains_ci_opt(s : String?, lower_needle : String) -> Bool {
+  match s {
+    Some(v) => contains_ci(v, lower_needle)
+    None => false
+  }
 }
 
 fn contains_ci(haystack : String, lower_needle : String) -> Bool {

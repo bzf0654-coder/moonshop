@@ -8,10 +8,13 @@
 // ---------- domain model ----------
 
 /// A product SKU. `price_cents` is the unit price in cents (分).
+/// `name` is the canonical (default-locale) name; `name_en` carries the
+/// optional English translation used by localized storefronts.
 #derive(Debug)
 pub struct Product {
   id : String
   name : String
+  name_en : String?
   category : String
   price_cents : Int
 }
@@ -19,13 +22,15 @@ pub struct Product {
 pub extend Product with @debug.Debug::{to_repr}
 
 /// Construct a product (id, name, category, unit price in cents).
+/// `name_en` is an optional English translation of the product name.
 pub fn product_new(
   id : String,
   name : String,
   category : String,
-  price_cents : Int
+  price_cents : Int,
+  name_en? : String
 ) -> Product {
-  { id, name, category, price_cents }
+  { id, name, name_en, category, price_cents }
 }
 
 /// One line in a shopping cart: `qty` units of a product.

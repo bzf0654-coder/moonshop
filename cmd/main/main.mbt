@@ -5,12 +5,12 @@
 /// export all orders as JSON.
 fn main {
   let catalog = #|[
-                   #|  {"id":"kb-01","name":"Mech Keyboard 87","category":"peripherals","price_cents":49900,"stock":8},
-                   #|  {"id":"m-01","name":"Wireless Mouse","category":"peripherals","price_cents":7900,"stock":20},
-                   #|  {"id":"sd-01","name":"SSD 1TB NVMe","category":"storage","price_cents":45900,"stock":15},
-                   #|  {"id":"hd-01","name":"HDD 4TB","category":"storage","price_cents":59900,"stock":5},
-                   #|  {"id":"cam-01","name":"Webcam 2K","category":"meetings","price_cents":32900,"stock":10},
-                   #|  {"id":"hub-01","name":"USB-C Hub 7in1","category":"meetings","price_cents":19900,"stock":2}
+                   #|  {"id":"kb-01","name":"机械键盘 87键","name_en":"Mech Keyboard 87","category":"peripherals","price_cents":49900,"stock":8},
+                   #|  {"id":"m-01","name":"无线鼠标","name_en":"Wireless Mouse","category":"peripherals","price_cents":7900,"stock":20},
+                   #|  {"id":"sd-01","name":"固态硬盘 1TB","name_en":"SSD 1TB NVMe","category":"storage","price_cents":45900,"stock":15},
+                   #|  {"id":"hd-01","name":"机械硬盘 4TB","name_en":"HDD 4TB","category":"storage","price_cents":59900,"stock":5},
+                   #|  {"id":"cam-01","name":"高清摄像头 2K","name_en":"Webcam 2K","category":"meetings","price_cents":32900,"stock":10},
+                   #|  {"id":"hub-01","name":"七合一扩展坞","name_en":"USB-C Hub 7in1","category":"meetings","price_cents":19900,"stock":2}
                    #|]
   let store = @lib.store_new()
   let imported = @lib.store_import_json(store, catalog)

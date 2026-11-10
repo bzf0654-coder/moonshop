@@ -17,6 +17,7 @@ pub fn store_import_json(store : Store, content : String) -> Int {
           JObject(fields) => {
             let mut id = ""
             let mut name = ""
+            let mut name_en : String? = None
             let mut category = ""
             let mut price = 0
             let mut stock = 0
@@ -25,6 +26,7 @@ pub fn store_import_json(store : Store, content : String) -> Int {
               match (field.0, field.1) {
                 ("id", JString(v)) => id = v
                 ("name", JString(v)) => name = v
+                ("name_en", JString(v)) => name_en = Some(v)
                 ("category", JString(v)) => category = v
                 ("price_cents", JNumber(v)) => price = v.to_int()
                 ("stock", JNumber(v)) => stock = v.to_int()
@@ -35,7 +37,11 @@ pub fn store_import_json(store : Store, content : String) -> Int {
               ok = false
             }
             if ok {
-              store_add_product(store, product_new(id, name, category, price), stock)
+              let product = match name_en {
+                Some(en) => product_new(id, name, category, price, name_en=en)
+                None => product_new(id, name, category, price)
+              }
+              store_add_product(store, product, stock)
               imported = imported + 1
             }
           }
@@ -53,16 +59,17 @@ pub fn store_import_json(store : Store, content : String) -> Int {
 fn order_to_json(order : Order) -> JsonValue {
   let lines : Array[JsonValue] = []
   for l in order.lines {
-    lines.push(
-      JObject(
-        [
-          ("product_id", JString(l.product_id)),
-          ("name", JString(l.name)),
-          ("unit_price_cents", JNumber(l.unit_price_cents.to_double())),
-          ("qty", JNumber(l.qty.to_double())),
-        ],
-      ),
-    )
+    let line_fields : Array[(String, JsonValue)] = [
+      ("product_id", JString(l.product_id)),
+      ("name", JString(l.name)),
+      ("unit_price_cents", JNumber(l.unit_price_cents.to_double())),
+      ("qty", JNumber(l.qty.to_double())),
+    ]
+    match l.name_en {
+      Some(en) => line_fields.push(("name_en", JString(en)))
+      None => ()
+    }
+    lines.push(JObject(line_fields))
   }
   let b = order.breakdown
   JObject(

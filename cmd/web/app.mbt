@@ -3,12 +3,12 @@
 // the MoonBit side, so the page keeps zero business JavaScript.
 
 let catalog_json = #|[
-                     #|  {"id":"kb-01","name":"Mech Keyboard 87","category":"peripherals","price_cents":49900,"stock":8},
-                     #|  {"id":"m-01","name":"Wireless Mouse","category":"peripherals","price_cents":7900,"stock":20},
-                     #|  {"id":"sd-01","name":"SSD 1TB NVMe","category":"storage","price_cents":45900,"stock":15},
-                     #|  {"id":"hd-01","name":"HDD 4TB","category":"storage","price_cents":59900,"stock":5},
-                     #|  {"id":"cam-01","name":"Webcam 2K","category":"meetings","price_cents":32900,"stock":10},
-                     #|  {"id":"hub-01","name":"USB-C Hub 7in1","category":"meetings","price_cents":19900,"stock":2}
+                     #|  {"id":"kb-01","name":"机械键盘 87键","name_en":"Mech Keyboard 87","category":"peripherals","price_cents":49900,"stock":8},
+                     #|  {"id":"m-01","name":"无线鼠标","name_en":"Wireless Mouse","category":"peripherals","price_cents":7900,"stock":20},
+                     #|  {"id":"sd-01","name":"固态硬盘 1TB","name_en":"SSD 1TB NVMe","category":"storage","price_cents":45900,"stock":15},
+                     #|  {"id":"hd-01","name":"机械硬盘 4TB","name_en":"HDD 4TB","category":"storage","price_cents":59900,"stock":5},
+                     #|  {"id":"cam-01","name":"高清摄像头 2K","name_en":"Webcam 2K","category":"meetings","price_cents":32900,"stock":10},
+                     #|  {"id":"hub-01","name":"七合一扩展坞","name_en":"USB-C Hub 7in1","category":"meetings","price_cents":19900,"stock":2}
                      #|]
 
 let store : @lib.Store = @lib.store_new()
@@ -44,6 +44,29 @@ fn category_label(c : String) -> String {
   } else {
     c
   }
+}
+
+/// Localized product name: English mode prefers `name_en`, falling back
+/// to the canonical name; Chinese mode shows the canonical name.
+fn product_name(p : @lib.Product) -> String {
+  if !state.zh {
+    match p.name_en {
+      Some(en) => return en
+      None => ()
+    }
+  }
+  p.name
+}
+
+/// Localized name of an order snapshot line (same rule as product_name).
+fn line_name(l : @lib.OrderLine) -> String {
+  if !state.zh {
+    match l.name_en {
+      Some(en) => return en
+      None => ()
+    }
+  }
+  l.name
 }
 
 fn coupon_now() -> @lib.Coupon? {
@@ -93,7 +116,7 @@ fn render_catalog() -> Unit {
   for item in store.items {
     let p = item.product
     buf.write_string(
-      "<div class=\"card\"><div><b>" + p.name +
+      "<div class=\"card\"><div><b>" + product_name(p) +
       "</b><div class=\"cat\">" + category_label(p.category) +
       " · " + t("库存", "stock") + " " + item.stock.to_string() +
       "</div></div><div class=\"price\">" + @lib.format_cents(p.price_cents) +
@@ -172,7 +195,7 @@ fn render_cart() -> Unit {
       match @lib.store_find(store, line.product_id) {
         Some(p) => {
           buf.write_string(
-            "<div class=\"row\"><span>" + p.name + " ×" + line.qty.to_string() +
+            "<div class=\"row\"><span>" + product_name(p) + " ×" + line.qty.to_string() +
             "</span><span class=\"price\">" +
             @lib.format_cents(p.price_cents * line.qty) +
             "</span><button class=\"rm\" id=\"rm-" + p.id + "\">−</button></div>",
@@ -208,7 +231,7 @@ fn render_receipt(order : @lib.Order) -> Unit {
   )
   for line in order.lines {
     buf.write_string(
-      "<tr><td>" + line.name + "</td><td>" + line.qty.to_string() +
+      "<tr><td>" + line_name(line) + "</td><td>" + line.qty.to_string() +
       "</td><td>" + @lib.format_cents(line.unit_price_cents) +
       "</td><td>" + @lib.format_cents(line.unit_price_cents * line.qty) +
       "</td></tr>",

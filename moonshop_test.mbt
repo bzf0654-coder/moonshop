@@ -266,3 +266,33 @@ test "order receipt shows lines and every pricing stage" {
     None => inspect("no order", content="REACHED")
   }
 }
+
+///|
+test "name_en round-trips through import, search and order snapshot" {
+  let store = @moonshop.store_new()
+  let catalog = "[{\"id\":\"kb\",\"name\":\"机械键盘\",\"name_en\":\"Mech Keyboard\",\"category\":\"peripherals\",\"price_cents\":49900,\"stock\":3},{\"id\":\"bad\",\"name\":\"缺英文名\"}]"
+  inspect(@moonshop.store_import_json(store, catalog), content=(
+    #|1
+  ))
+  inspect(@moonshop.store_search(store, "mech").length(), content="1")
+  inspect(@moonshop.store_search(store, "键盘").length(), content="1")
+  match @moonshop.store_find(store, "kb") {
+    Some(p) =>
+      inspect(@debug.to_string(p.name_en), content=(
+        #|Some("Mech Keyboard")
+      ))
+    None => inspect("missing", content="REACHED")
+  }
+  let cart = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart, "kb", 1))
+  match @moonshop.store_checkout(store, cart, None) {
+    Some(order) =>
+      match order.lines[0].name_en {
+        Some(en) => inspect(en, content="Mech Keyboard")
+        None => inspect("no name_en", content="REACHED")
+      }
+    None => inspect("no order", content="REACHED")
+  }
+  let exported = @moonshop.orders_export_json(store)
+  inspect(exported.contains("\"name_en\":\"Mech Keyboard\""), content="true")
+}
