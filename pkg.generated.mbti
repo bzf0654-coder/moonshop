@@ -28,6 +28,10 @@ pub fn cart_total_qty(Cart) -> Int32
 
 pub fn coupon_new(String, Int32, Int32) -> Coupon
 
+pub fn format_cents(Int32) -> String
+
+pub fn join_strings(Array[String], String) -> String
+
 pub fn json_as_array(JsonValue) -> Array[JsonValue]?
 
 pub fn json_as_bool(JsonValue) -> Bool?
@@ -43,6 +47,8 @@ pub fn json_get_double(JsonValue, String) -> Double?
 pub fn json_parse(String) -> JsonValue
 
 pub fn json_serialize(JsonValue) -> String
+
+pub fn order_receipt(Order) -> String
 
 pub fn orders_export_json(Store) -> String
 

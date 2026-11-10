@@ -120,6 +120,18 @@ pub fn store_categories(store : Store) -> Array[String] {
 
 // ---------- tiny ascii case helpers (core-only) ----------
 
+/// Join strings with a separator (small helper for displays).
+pub fn join_strings(parts : Array[String], sep : String) -> String {
+  let buf = StringBuilder()
+  for i, part in parts {
+    if i > 0 {
+      buf.write_string(sep)
+    }
+    buf.write_string(part)
+  }
+  buf.to_string()
+}
+
 fn to_lower(s : String) -> String {
   let buf = StringBuilder()
   for _, ch in s {

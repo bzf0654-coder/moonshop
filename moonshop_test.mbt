@@ -237,3 +237,32 @@ test "orders export round-trips as a JSON array" {
     _ => inspect("not array", content="REACHED")
   }
 }
+
+///|
+test "format_cents renders yuan with two decimals" {
+  inspect(@moonshop.format_cents(49900), content="¥499.00")
+  inspect(@moonshop.format_cents(5), content="¥0.05")
+  inspect(@moonshop.format_cents(0), content="¥0.00")
+  inspect(@moonshop.format_cents(-1050), content="¥-10.50")
+  inspect(@moonshop.join_strings(["a", "b", "c"], ", "), content="a, b, c")
+}
+
+///|
+test "order receipt shows lines and every pricing stage" {
+  let store = @moonshop.store_new()
+  ignore(@moonshop.store_import_json(store, "[{\"id\":\"sd-01\",\"name\":\"SSD 1TB\",\"category\":\"storage\",\"price_cents\":10000,\"stock\":5},{\"id\":\"m-01\",\"name\":\"Mouse\",\"category\":\"peripherals\",\"price_cents\":5000,\"stock\":5}]"))
+  let cart = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart, "sd-01", 3))
+  ignore(@moonshop.cart_add(cart, "m-01", 1))
+  match @moonshop.store_checkout(store, cart, None) {
+    Some(order) => {
+      let r = @moonshop.order_receipt(order)
+      inspect(r.contains("## Receipt MO-"), content="true")
+      inspect(r.contains("| SSD 1TB | 3 | ¥100.00 | ¥300.00 |"), content="true")
+      inspect(r.contains("bulk discount (qty ≥ 3): -¥15.00"), content="true")
+      inspect(r.contains("shipping: free"), content="true")
+      inspect(r.contains("**total: ¥335.00**"), content="true")
+    }
+    None => inspect("no order", content="REACHED")
+  }
+}
