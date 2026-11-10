@@ -30,7 +30,7 @@
 
 ```bash
 moon run cmd/main   # 完整购物演示：目录导入 → 用券结算 → 小票 → 超库存拒绝 → JSON 导出
-moon test           # 24 个行为测试
+moon test           # 29 个行为测试
 ```
 
 小票输出示例：
@@ -78,7 +78,8 @@ moon test           # 24 个行为测试
 - [x] 库存预占：store_reserve / store_available / store_sweep（逻辑时钟），普通结账按可用库存校验，预占结账原子提交
 - [x] 更多定价规则：会员折扣（第五阶段）+ 阶梯运费 + 满减 + 批发折扣
 - [x] 网页版演示：wasm-gc 优先 + js 自动回退（cmd/web，DOM 桥接仅三函数）
-- [x] 管理台：`cmd/admin`（与商店共享引擎和 localStorage 数据）：库存表格补货、订单流水、一键重置
+- [x] 管理台：`cmd/admin`（与商店共享引擎和 localStorage 数据）：库存表格补货、订单流水、一键重置；Admin 登录门禁
+- [x] 账号系统：手写 SHA-256（FIPS 向量验证）盐化+1000 轮拉伸密码、常量时间比较，Admin/Staff/Customer 角色层级，会话令牌与逻辑时钟过期
 - [ ] HashMap 索引：按 id 点查 O(1)（当前 O(n) 扫描，演示数据量下够用）
 
 ## 参赛声明
@@ -113,6 +114,13 @@ curl http://127.0.0.1:8080/api/products
 curl -X POST http://127.0.0.1:8080/api/checkout   -d '{"lines":[{"id":"sd-01","qty":3}],"coupon":"SAVE5000","rebate":true}'
 curl http://127.0.0.1:8080/api/orders/MO-000001
 ```
+
+## 账号与权限
+
+- 商店页登录框：注册（角色=顾客）/ 登录 / 退出；**未登录不能下单**
+- 管理台需要 **Admin** 登录（内置演示账号 `admin / admin123`，顾客 `demo / demo123`）
+- API：`POST /api/register|login|logout`、`GET /api/me`，受保护接口走 `Authorization: Bearer <token>`
+- 密码只存盐化摘要：手写 SHA-256 + 1000 轮拉伸 + 常量时间比较，导出文件里也绝无明文
 
 ## 管理台
 
