@@ -30,7 +30,7 @@
 
 ```bash
 moon run cmd/main   # 完整购物演示：目录导入 → 用券结算 → 小票 → 超库存拒绝 → JSON 导出
-moon test           # 20 个行为测试
+moon test           # 24 个行为测试
 ```
 
 小票输出示例：
@@ -73,12 +73,13 @@ moon test           # 20 个行为测试
 
 ## 路线图
 
-- [ ] HTTP API 层：商品列表 / 下单 / 查单三个接口（接入 mocket 或 crescent）
+- [x] HTTP API 层：`cmd/server`（js 后端跑在 Node 上，宿主仅 ~20 行 socket 胶水）：商品列表 / 下单 / 订单列表 / 按单号查询 / 健康检查
 - [x] 会话持久化：目录/库存/订单经 localStorage 落盘，刷新不丢（wasm-gc 与 js 后端同套宿主桥），带一键重置
-- [ ] 库存预占与超时释放（并发安全版结账）
-- [ ] 更多定价规则：阶梯运费、会员价（满减已实现）
+- [x] 库存预占：store_reserve / store_available / store_sweep（逻辑时钟），普通结账按可用库存校验，预占结账原子提交
+- [x] 更多定价规则：会员折扣（第五阶段）+ 阶梯运费 + 满减 + 批发折扣
 - [x] 网页版演示：wasm-gc 优先 + js 自动回退（cmd/web，DOM 桥接仅三函数）
-- [ ] 管理界面增强（rabbita）：目录管理与订单流水可视化
+- [x] 管理台：`cmd/admin`（与商店共享引擎和 localStorage 数据）：库存表格补货、订单流水、一键重置
+- [ ] HashMap 索引：按 id 点查 O(1)（当前 O(n) 扫描，演示数据量下够用）
 
 ## 参赛声明
 
@@ -102,3 +103,17 @@ python -m http.server 8181   # 仓库根目录执行
 ```
 
 页面优先加载 **wasm-gc** 后端（约 110KB，比 js 产物小 40%），浏览器不支持时自动回退 js 后端，页首徽标实时显示当前驱动。界面**中英文一键切换**（含商品名、类目、定价明细与历史小票的整体重渲染），**刷新不丢数据**（localStorage 持久化 + 一键重置），全部由 MoonBit 侧管理。商品目录、加购/减购、优惠券开关、结账、小票渲染、库存打减全部是 `cmd/web` 包里的 **MoonBit 代码**在跑——DOM 桥接（`extern "js"` / wasm 宿主导入）只有三个函数，页面零业务 JS。
+
+## HTTP API（Node 运行 MoonBit）
+
+```bash
+moon build --target js
+node _build/js/debug/build/cmd/server/server.js   # 监听 8080
+curl http://127.0.0.1:8080/api/products
+curl -X POST http://127.0.0.1:8080/api/checkout   -d '{"lines":[{"id":"sd-01","qty":3}],"coupon":"SAVE5000","rebate":true}'
+curl http://127.0.0.1:8080/api/orders/MO-000001
+```
+
+## 管理台
+
+`moon build` 后打开 `http://127.0.0.1:8181/web/admin.html`：库存表格逐品补货（数量来自共享输入框）、订单流水表、一键重置——与商店页共享同一份引擎实例数据，补货后商店刷新即见。
