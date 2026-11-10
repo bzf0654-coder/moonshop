@@ -6,3 +6,4 @@ target
 .moonagent/
 web/web.js
 
+web/web.wasm

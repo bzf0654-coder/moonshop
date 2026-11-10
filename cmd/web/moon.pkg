@@ -6,8 +6,9 @@ pkgtype(kind: "executable")
 
 options(
   targets: {
-    "app.js.mbt": [ "js" ],
+    "app.mbt": [ "js", "wasm-gc" ],
     "ui.js.mbt": [ "js" ],
-    "stub.mbt": [ "wasm", "wasm-gc", "native" ],
+    "ui.wasm-gc.mbt": [ "wasm-gc" ],
+    "stub.mbt": [ "wasm", "native" ],
   },
 )

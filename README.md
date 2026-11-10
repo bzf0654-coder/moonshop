@@ -77,7 +77,8 @@ moon test           # 17 个行为测试
 - [ ] 订单与目录落盘持久化（JSON 文件读写）
 - [ ] 库存预占与超时释放（并发安全版结账）
 - [ ] 更多定价规则：满减、阶梯运费、会员价
-- [ ] wasm 管理界面（rabbita）：目录管理与订单流水可视化
+- [x] 网页版演示：wasm-gc 优先 + js 自动回退（cmd/web，DOM 桥接仅三函数）
+- [ ] 管理界面增强（rabbita）：目录管理与订单流水可视化
 
 ## 参赛声明
 
@@ -89,13 +90,15 @@ moon test           # 17 个行为测试
 
 Apache-2.0
 
-## 网页版演示
+## 网页版演示（wasm-gc 优先，js 自动回退）
 
 ```bash
+moon build --target wasm-gc
 moon build --target js
+cp _build/wasm-gc/debug/build/cmd/web/web.wasm web/web.wasm
 cp _build/js/debug/build/cmd/web/web.js web/web.js
 python -m http.server 8181   # 仓库根目录执行
 # 浏览器打开 http://127.0.0.1:8181/web/
 ```
 
-商品目录、加购/减购、优惠券开关、结账、小票渲染全部由 `cmd/web` 包里的 **MoonBit 代码**驱动（`extern "js"` 只做 DOM 桥接，页面零业务 JS）。
+页面优先加载 **wasm-gc** 后端（约 110KB，比 js 产物小 40%），浏览器不支持时自动回退 js 后端，页首徽标实时显示当前驱动。商品目录、加购/减购、优惠券开关、结账、小票渲染、库存打减全部是 `cmd/web` 包里的 **MoonBit 代码**在跑——DOM 桥接（`extern "js"` / wasm 宿主导入）只有三个函数，页面零业务 JS。

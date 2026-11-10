@@ -58,7 +58,7 @@
 </style>
 </head>
 <body>
-  <h1>🛒 moonshop <span class="badge">MoonBit 驱动</span></h1>
+  <h1>🛒 moonshop <span class="badge" id="backend">MoonBit 驱动</span></h1>
   <div>纯 MoonBit 电商领域引擎（目录 / 库存 / 定价 / 结账 / 订单）编译为 WebAssembly 时代的 JS 后端直接驱动本页 —— 页面无任何业务 JS。</div>
   <main>
     <section>
@@ -76,6 +76,20 @@
       <div id="receipt"><div class="empty">下单后这里显示小票</div></div>
     </section>
   </main>
-  <script src="./web.js"></script>
+  <script type="module">
+    const badge = document.getElementById("backend");
+    try {
+      await import("./web-gc.mjs");
+      badge.textContent = "MoonBit wasm-gc 驱动";
+      badge.style.background = "#dcfce7";
+      badge.style.color = "#166534";
+    } catch (e) {
+      console.warn("wasm-gc unavailable, falling back to the js backend:", e);
+      const s = document.createElement("script");
+      s.src = "./web.js";
+      document.body.appendChild(s);
+      badge.textContent = "MoonBit js 后端（已自动回退）";
+    }
+  </script>
 </body>
 </html>
