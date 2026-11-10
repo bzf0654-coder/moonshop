@@ -175,3 +175,16 @@ pub fn price_cart(
     },
   )
 }
+
+///|
+// ---------- built-in coupon registry ----------
+
+/// Built-in coupon registry for API callers: maps a coupon code to its
+/// Coupon. Extending the catalog of codes is a one-line change here.
+pub fn coupon_from_code(code : String) -> Coupon? {
+  if code == "SAVE5000" {
+    Some(coupon_new(code, 5000, 100000))
+  } else {
+    None
+  }
+}

@@ -36,6 +36,8 @@ pub fn cart_total_qty(Cart) -> Int32
 
 pub fn catalog_export_json(Store) -> String
 
+pub fn coupon_from_code(String) -> Coupon?
+
 pub fn coupon_new(String, Int32, Int32) -> Coupon
 
 pub fn format_cents(Int32) -> String
@@ -57,6 +59,8 @@ pub fn json_get_double(JsonValue, String) -> Double?
 pub fn json_parse(String) -> JsonValue
 
 pub fn json_serialize(JsonValue) -> String
+
+pub fn order_export_json(Order) -> String
 
 pub fn order_receipt(Order) -> String
 

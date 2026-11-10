@@ -240,3 +240,12 @@ fn parse_order_json(item : JsonValue) -> (Order, Int)? {
     _ => None
   }
 }
+
+///|
+// ---------- single-order export ----------
+
+/// Export a single order as a JSON object (the same shape used inside
+/// `orders_export_json` arrays).
+pub fn order_export_json(order : Order) -> String {
+  json_serialize(order_to_json(order))
+}
