@@ -55,24 +55,33 @@
     display: inline-block; background: #eef2ff; color: #3730a3;
     border-radius: 999px; padding: 2px 12px; font-size: 0.85rem; margin-left: 8px;
   }
+  .top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px;
+  }
+  #lang { min-width: 64px; font-weight: 600; }
+  #subtitle { color: #556; margin-top: 6px; }
 </style>
 </head>
 <body>
-  <h1>🛒 moonshop <span class="badge" id="backend">MoonBit 驱动</span></h1>
-  <div>纯 MoonBit 电商领域引擎（目录 / 库存 / 定价 / 结账 / 订单）编译为 WebAssembly 时代的 JS 后端直接驱动本页 —— 页面无任何业务 JS。</div>
+  <header class="top">
+    <h1>🛒 moonshop <span class="badge" id="backend">MoonBit 驱动</span></h1>
+    <button id="lang">EN</button>
+  </header>
+  <div id="subtitle">纯 MoonBit 电商领域引擎（目录 / 库存 / 定价 / 结账 / 订单）——本页业务逻辑零 JavaScript。</div>
   <main>
     <section>
-      <h2>商品目录</h2>
+      <h2 id="h-catalog">商品目录</h2>
       <div id="catalog"></div>
     </section>
     <section>
-      <h2>购物车</h2>
+      <h2 id="h-cart">购物车</h2>
       <div id="cart"></div>
       <button id="coupon">优惠券 SAVE5000（满 ¥1000 减 ¥50）：已启用</button>
       <button id="checkout">结账 Checkout</button>
     </section>
     <section>
-      <h2>订单小票</h2>
+      <h2 id="h-receipt">订单小票</h2>
       <div id="receipt"><div class="empty">下单后这里显示小票</div></div>
     </section>
   </main>

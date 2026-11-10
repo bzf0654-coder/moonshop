@@ -1,5 +1,6 @@
 // moonshop web demo — the real MoonBit domain engine driving a web page.
-// Runs on load (js backend); DOM access via ui.js.mbt externs.
+// Bilingual (中文/English) with a live toggle; all UI strings come from
+// the MoonBit side, so the page keeps zero business JavaScript.
 
 let catalog_json = #|[
                      #|  {"id":"kb-01","name":"Mech Keyboard 87","category":"peripherals","price_cents":49900,"stock":8},
@@ -16,9 +17,34 @@ let cart : @lib.Cart = @lib.cart_new()
 
 priv struct WebState {
   mut coupon_on : Bool
+  mut zh : Bool
+  mut last_order : @lib.Order?
 }
 
-let state : WebState = { coupon_on: true }
+let state : WebState = { coupon_on: true, zh: true, last_order: None }
+
+/// Current-language text picker.
+fn t(zh : String, en : String) -> String {
+  if state.zh {
+    zh
+  } else {
+    en
+  }
+}
+
+/// Known categories get localized labels; unknown ones pass through.
+fn category_label(c : String) -> String {
+  if state.zh {
+    match c {
+      "peripherals" => "外设"
+      "storage" => "存储"
+      "meetings" => "会议设备"
+      other => other
+    }
+  } else {
+    c
+  }
+}
 
 fn coupon_now() -> @lib.Coupon? {
   if state.coupon_on {
@@ -31,16 +57,48 @@ fn coupon_now() -> @lib.Coupon? {
 ///|
 // ---------- rendering ----------
 
+fn render_coupon_label() -> Unit {
+  let status = if state.coupon_on {
+    t("已启用", "ON")
+  } else {
+    t("已停用", "OFF")
+  }
+  get_el("coupon").set_html(
+    t(
+      "优惠券 SAVE5000（满 ¥1000 减 ¥50）：" + status,
+      "Coupon SAVE5000 (¥50 off over ¥1000): " + status,
+    ),
+  )
+}
+
+/// Static shell texts (headings, buttons, subtitle) — re-rendered by
+/// MoonBit so the language toggle covers the whole page.
+fn render_shell() -> Unit {
+  get_el("subtitle").set_html(
+    t(
+      "纯 MoonBit 电商领域引擎（目录 / 库存 / 定价 / 结账 / 订单）——本页业务逻辑零 JavaScript。",
+      "A pure-MoonBit e-commerce domain engine (catalog / inventory / pricing / checkout / orders) — zero business JavaScript on this page.",
+    ),
+  )
+  get_el("h-catalog").set_html(t("商品目录", "Catalog"))
+  get_el("h-cart").set_html(t("购物车", "Shopping Cart"))
+  get_el("h-receipt").set_html(t("订单小票", "Receipt"))
+  get_el("checkout").set_html(t("结账 Checkout", "Checkout"))
+  get_el("lang").set_html(if state.zh { "EN" } else { "中文" })
+  render_coupon_label()
+}
+
 fn render_catalog() -> Unit {
   let buf = StringBuilder()
   for item in store.items {
     let p = item.product
     buf.write_string(
       "<div class=\"card\"><div><b>" + p.name +
-      "</b><div class=\"cat\">" + p.category +
-      " · stock " + item.stock.to_string() +
+      "</b><div class=\"cat\">" + category_label(p.category) +
+      " · " + t("库存", "stock") + " " + item.stock.to_string() +
       "</div></div><div class=\"price\">" + @lib.format_cents(p.price_cents) +
-      "</div><button class=\"add\" id=\"add-" + p.id + "\">+ Add to Cart</button></div>",
+      "</div><button class=\"add\" id=\"add-" + p.id + "\">" +
+      t("+ 加入购物车", "+ Add to Cart") + "</button></div>",
     )
   }
   get_el("catalog").set_html(buf.to_string())
@@ -63,10 +121,52 @@ fn cart_qty(id : String) -> Int {
   0
 }
 
+fn append_totals(buf : StringBuilder) -> Unit {
+  match @lib.price_cart(store, cart, coupon_now()) {
+    Some(b) => {
+      let mut coupon_line = ""
+      match b.coupon_code {
+        Some(code) =>
+          coupon_line = "<br/>" + t("优惠券", "Coupon") + " " + code + " −" +
+          @lib.format_cents(b.coupon_off)
+        None => ()
+      }
+      buf.write_string(
+        "<div class=\"sum\">" + t("小计", "Subtotal") + " " +
+        @lib.format_cents(b.subtotal) +
+        (if b.bulk_discount > 0 {
+           "<br/>" + t("批发折扣", "Bulk discount") + " −" +
+           @lib.format_cents(b.bulk_discount)
+         } else {
+           ""
+         }) +
+        coupon_line +
+        "<br/>" + t("运费", "Shipping") + " " +
+        (if b.shipping == 0 {
+           t("免邮", "free")
+         } else {
+           @lib.format_cents(b.shipping)
+         }) +
+        "<br/><b>" + t("应付合计", "Total payable") + " " +
+        @lib.format_cents(b.total) + "</b></div>",
+      )
+    }
+    None => buf.write_string(
+      "<div class=\"sum\">" +
+      t("购物车包含目录中不存在的商品", "The cart contains items not in the catalog") +
+      "</div>",
+    )
+  }
+}
+
 fn render_cart() -> Unit {
   let buf = StringBuilder()
   if cart.lines.length() == 0 {
-    buf.write_string("<div class=\"empty\">The shopping cart is empty</div>")
+    buf.write_string(
+      "<div class=\"empty\">" +
+      t("购物车是空的", "The shopping cart is empty") +
+      "</div>",
+    )
   } else {
     for line in cart.lines {
       match @lib.store_find(store, line.product_id) {
@@ -98,37 +198,13 @@ fn render_cart() -> Unit {
   }
 }
 
-fn append_totals(buf : StringBuilder) -> Unit {
-  match @lib.price_cart(store, cart, coupon_now()) {
-    Some(b) => {
-      let mut coupon_line = ""
-      match b.coupon_code {
-        Some(code) =>
-          coupon_line = "<br/>Coupon " + code + " −" +
-          @lib.format_cents(b.coupon_off)
-        None => ()
-      }
-      buf.write_string(
-        "<div class=\"sum\">Subtotal " + @lib.format_cents(b.subtotal) +
-        (if b.bulk_discount > 0 {
-           "<br/>Bulk discount −" + @lib.format_cents(b.bulk_discount)
-         } else {
-           ""
-         }) +
-        coupon_line +
-        "<br/>Shipping " +
-        (if b.shipping == 0 { "free" } else { @lib.format_cents(b.shipping) }) +
-        "<br/><b>Total payable " + @lib.format_cents(b.total) + "</b></div>",
-      )
-    }
-    None => buf.write_string("<div class=\"sum\">The cart contains items not in the catalog</div>")
-  }
-}
-
 fn render_receipt(order : @lib.Order) -> Unit {
   let buf = StringBuilder()
   buf.write_string(
-    "<div class=\"ok\">Order placed successfully · " + order.order_no + "</div><table><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Subtotal</th></tr>",
+    "<div class=\"ok\">" + t("下单成功", "Order placed") + " · " +
+    order.order_no + "</div><table><tr><th>" + t("商品", "Item") + "</th><th>" +
+    t("数量", "Qty") + "</th><th>" + t("单价", "Unit") + "</th><th>" +
+    t("小计", "Subtotal") + "</th></tr>",
   )
   for line in order.lines {
     buf.write_string(
@@ -140,19 +216,40 @@ fn render_receipt(order : @lib.Order) -> Unit {
   }
   let b = order.breakdown
   buf.write_string("</table><div class=\"sum\">")
-  buf.write_string("Subtotal " + @lib.format_cents(b.subtotal) + "<br/>")
+  buf.write_string(t("小计", "Subtotal") + " " + @lib.format_cents(b.subtotal) + "<br/>")
   if b.bulk_discount > 0 {
-    buf.write_string("Bulk discount −" + @lib.format_cents(b.bulk_discount) + "<br/>")
+    buf.write_string(
+      t("批发折扣", "Bulk discount") + " −" +
+      @lib.format_cents(b.bulk_discount) + "<br/>",
+    )
   }
   if b.coupon_off > 0 {
-    buf.write_string("Coupon −" + @lib.format_cents(b.coupon_off) + "<br/>")
+    buf.write_string(
+      t("优惠券", "Coupon") + " −" + @lib.format_cents(b.coupon_off) + "<br/>",
+    )
   }
   buf.write_string(
-    "Shipping " +
-    (if b.shipping == 0 { "free" } else { @lib.format_cents(b.shipping) }) +
-    "<br/><b>Total " + @lib.format_cents(b.total) + "</b></div>",
+    t("运费", "Shipping") + " " +
+    (if b.shipping == 0 {
+       t("免邮", "free")
+     } else {
+       @lib.format_cents(b.shipping)
+     }) +
+    "<br/><b>" + t("合计", "Total") + " " + @lib.format_cents(b.total) +
+    "</b></div>",
   )
   get_el("receipt").set_html(buf.to_string())
+}
+
+fn render_receipt_view() -> Unit {
+  match state.last_order {
+    Some(order) => render_receipt(order)
+    None => get_el("receipt").set_html(
+      "<div class=\"empty\">" +
+      t("下单后这里显示小票", "The receipt appears here after checkout") +
+      "</div>",
+    )
+  }
 }
 
 ///|
@@ -160,17 +257,20 @@ fn render_receipt(order : @lib.Order) -> Unit {
 
 fn run() -> Unit {
   ignore(@lib.store_import_json(store, catalog_json))
+  render_shell()
   render_catalog()
   render_cart()
+  render_receipt_view()
+  get_el("lang").on_click(fn() {
+    state.zh = !state.zh
+    render_shell()
+    render_catalog()
+    render_cart()
+    render_receipt_view()
+  })
   get_el("coupon").on_click(fn() {
     state.coupon_on = !state.coupon_on
-    get_el("coupon").set_html(
-      if state.coupon_on {
-        "Coupon SAVE5000 (¥50 off over ¥1000): Enabled"
-      } else {
-        "Coupon SAVE5000 (¥50 off over ¥1000): Disabled"
-      },
-    )
+    render_coupon_label()
     render_cart()
   })
   get_el("checkout").on_click(fn() {
@@ -184,12 +284,18 @@ fn run() -> Unit {
         for id in ids {
           ignore(@lib.cart_set_qty(cart, id, 0))
         }
-        render_receipt(order)
+        state.last_order = Some(order)
+        render_receipt_view()
         render_catalog()
         render_cart()
       }
       None => get_el("receipt").set_html(
-        "<div class=\"fail\">Order failed: insufficient stock, the store was not modified</div>",
+        "<div class=\"fail\">" +
+        t(
+          "下单失败：库存不足，商店未被修改",
+          "Checkout failed: insufficient stock, the store was not modified"
+        ) +
+        "</div>",
       )
     }
   })
