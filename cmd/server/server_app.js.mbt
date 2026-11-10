@@ -4,6 +4,18 @@
 
 let store : @lib.Store = @lib.store_new()
 
+// Server-side clock: Node host gives real epoch seconds so session
+// TTLs behave like real time. (The dummy parameter keeps the extern a
+// function — zero-arg externs are compiled as eager values on js.)
+extern "js" fn now_epoch_ffi(dummy : Int) -> Int =
+  #|() => Math.floor(Date.now() / 1000)
+
+fn now_epoch() -> Int {
+  now_epoch_ffi(0)
+}
+
+let accounts : @lib.Accounts = @lib.accounts_new()
+
 let catalog_json = #|[
                      #|  {"id":"kb-01","name":"机械键盘 87键","name_en":"Mech Keyboard 87","category":"peripherals","price_cents":49900,"stock":8},
                      #|  {"id":"m-01","name":"无线鼠标","name_en":"Wireless Mouse","category":"peripherals","price_cents":7900,"stock":20},
@@ -16,10 +28,10 @@ let catalog_json = #|[
 ///|
 // ---------- host bridge ----------
 
-// handler(method, url, body) must return "<status>\n<body>".
+// handler(method, url, authorization, body) returns "<status>\n<body>".
 extern "js" fn start_http(
   port : Int,
-  handler : (String, String, String) -> String
+  handler : (String, String, String, String) -> String
 ) -> Unit =
   #|(port, handler) => {
   #|  const http = require("node:http");
@@ -27,7 +39,8 @@ extern "js" fn start_http(
   #|    let body = "";
   #|    req.on("data", (chunk) => { body += chunk; });
   #|    req.on("end", () => {
-  #|      const out = handler(req.method, req.url, body);
+  #|      const auth = (req.headers && req.headers.authorization) || "";
+  #|      const out = handler(req.method, req.url, auth, body);
   #|      const sep = out.indexOf("\n");
   #|      const status = parseInt(out.slice(0, sep), 10);
   #|      res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
@@ -65,29 +78,104 @@ fn path_of(url : String) -> String {
   url[0:cut].to_owned()
 }
 
-///|
-// ---------- routes ----------
-
-fn handle(method : String, url : String, body : String) -> String {
-  let path = path_of(url)
-  match (method, path) {
-    ("GET", "/api/health") => ok("{\"ok\":true}")
-    ("GET", "/api/products") => ok(@lib.catalog_export_json(store))
-    ("GET", "/api/orders") => ok(@lib.orders_export_json(store))
-    ("POST", "/api/checkout") => api_checkout(body)
-    ("GET", _) =>
-      if path.has_prefix("/api/orders/") {
-        let order_no = path["/api/orders/".length():].to_owned()
-        match @lib.store_find_order(store, order_no) {
-          Some(order) => ok(@lib.order_export_json(order))
-          None => error(404, "order not found")
-        }
-      } else {
-        error(404, "unknown route")
-      }
-    _ => error(405, "method not allowed")
+fn bearer(auth : String) -> String {
+  if auth.has_prefix("Bearer ") {
+    auth["Bearer ".length():].to_owned()
+  } else {
+    ""
   }
 }
+
+///|
+// ---------- auth routes ----------
+
+fn api_register(body : String) -> String {
+  let doc = @lib.json_parse(body)
+  let username = match @lib.json_get(doc, "username") {
+    Some(v) =>
+      match @lib.json_as_string(v) {
+        Some(s) => s
+        None => return error(400, "username must be a string")
+      }
+    None => return error(400, "username required")
+  }
+  let password = match @lib.json_get(doc, "password") {
+    Some(v) =>
+      match @lib.json_as_string(v) {
+        Some(s) => s
+        None => return error(400, "password must be a string")
+      }
+    None => return error(400, "password required")
+  }
+  // public registration always creates Customer accounts
+  if @lib.accounts_register(accounts, username, password, @lib.Customer) {
+    respond(201, "{\"username\":\"" + username + "\",\"role\":\"customer\"}")
+  } else {
+    error(409, "invalid username/password or already registered")
+  }
+}
+
+fn api_login(body : String) -> String {
+  let doc = @lib.json_parse(body)
+  let username = match @lib.json_get(doc, "username") {
+    Some(v) =>
+      match @lib.json_as_string(v) {
+        Some(s) => s
+        None => return error(400, "username must be a string")
+      }
+    None => return error(400, "username required")
+  }
+  let password = match @lib.json_get(doc, "password") {
+    Some(v) =>
+      match @lib.json_as_string(v) {
+        Some(s) => s
+        None => return error(400, "password must be a string")
+      }
+    None => return error(400, "password required")
+  }
+  match @lib.accounts_login(accounts, username, password, now_epoch()) {
+    Some(session) =>
+      ok(
+        "{\"token\":\"" + session.token + "\",\"username\":\"" +
+        session.username + "\",\"role\":\"" +
+        @lib.role_label(session.role) + "\"}",
+      )
+    None => error(401, "bad credentials")
+  }
+}
+
+/// Admin-only restock: {id, qty}.
+fn api_restock(auth : String, body : String) -> String {
+  match @lib.accounts_require(accounts, bearer(auth), now_epoch(), @lib.Admin) {
+    Some(_) => ()
+    None => return error(403, "admin required")
+  }
+  let doc = @lib.json_parse(body)
+  let id = match @lib.json_get(doc, "id") {
+    Some(v) =>
+      match @lib.json_as_string(v) {
+        Some(s) => s
+        None => return error(400, "id must be a string")
+      }
+    None => return error(400, "id required")
+  }
+  let qty = match @lib.json_get(doc, "qty") {
+    Some(v) =>
+      match @lib.json_as_double(v) {
+        Some(d) => d.to_int()
+        None => return error(400, "qty must be a number")
+      }
+    None => return error(400, "qty required")
+  }
+  if @lib.store_restock(store, id, qty) {
+    ok("{\"ok\":true}")
+  } else {
+    error(404, "unknown product")
+  }
+}
+
+///|
+// ---------- shop routes ----------
 
 fn api_checkout(body : String) -> String {
   let doc = @lib.json_parse(body)
@@ -159,7 +247,56 @@ fn api_checkout(body : String) -> String {
 }
 
 ///|
+// ---------- router ----------
+
+fn handle(method : String, url : String, auth : String, body : String) -> String {
+  let path = path_of(url)
+  match (method, path) {
+    ("GET", "/api/health") => ok("{\"ok\":true}")
+    ("GET", "/api/products") => ok(@lib.catalog_export_json(store))
+    ("GET", "/api/orders") => ok(@lib.orders_export_json(store))
+    ("POST", "/api/register") => api_register(body)
+    ("POST", "/api/login") => api_login(body)
+    ("POST", "/api/logout") =>
+      match @lib.accounts_logout(accounts, bearer(auth)) {
+        true => ok("{\"ok\":true}")
+        false => error(401, "invalid or expired token")
+      }
+    ("GET", "/api/me") =>
+      match @lib.accounts_authenticate(accounts, bearer(auth), now_epoch()) {
+        Some(user) =>
+          ok(
+            "{\"username\":\"" + user.username +
+            "\",\"role\":\"" + @lib.role_label(user.role) + "\"}",
+          )
+        None => error(401, "invalid or expired token")
+      }
+    ("POST", "/api/checkout") => {
+      // any authenticated account may buy
+      match @lib.accounts_authenticate(accounts, bearer(auth), now_epoch()) {
+        Some(_) => api_checkout(body)
+        None => error(401, "login required")
+      }
+    }
+    ("POST", "/api/admin/restock") => api_restock(auth, body)
+    ("GET", _) =>
+      if path.has_prefix("/api/orders/") {
+        let order_no = path["/api/orders/".length():].to_owned()
+        match @lib.store_find_order(store, order_no) {
+          Some(order) => ok(@lib.order_export_json(order))
+          None => error(404, "order not found")
+        }
+      } else {
+        error(404, "unknown route")
+      }
+    _ => error(405, "method not allowed")
+  }
+}
+
+///|
 fn run_server() -> Unit {
   ignore(@lib.store_import_json(store, catalog_json))
+  // built-in admin (admin/admin123); users self-register via /api/register
+  ignore(@lib.accounts_register(accounts, "admin", "admin123", @lib.Admin))
   start_http(8080, handle)
 }
