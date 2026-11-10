@@ -13,14 +13,14 @@ name = "bzf0654-coder/moonshop"
 
 version = "0.1.0"
 
-readme = "README.mbt.md"
+readme = "README.md"
 
-repository = ""
+repository = "https://github.com/bzf0654-coder/moonshop"
 
 license = "Apache-2.0"
 
-keywords = []
+keywords = ["ecommerce", "shopping-cart", "domain-model", "moonbit", "demo"]
 
 preferred_target = "wasm"
 
-description = ""
+description = "A minimal e-commerce domain engine in MoonBit: catalog, inventory, cart, staged pricing, stock-validated checkout, JSON persistence and Markdown receipts."
