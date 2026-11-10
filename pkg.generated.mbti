@@ -6,6 +6,14 @@ import {
 }
 
 // Values
+pub const BULK_DISCOUNT_PCT : Int32 = 5
+
+pub const BULK_MIN_QTY : Int32 = 3
+
+pub const FREE_SHIPPING_THRESHOLD_CENTS : Int32 = 9900
+
+pub const SHIPPING_FEE_CENTS : Int32 = 800
+
 pub fn cart_add(Cart, String, Int32) -> Bool
 
 pub fn cart_is_empty(Cart) -> Bool
@@ -17,6 +25,10 @@ pub fn cart_remove(Cart, String) -> Bool
 pub fn cart_set_qty(Cart, String, Int32) -> Bool
 
 pub fn cart_total_qty(Cart) -> Int32
+
+pub fn coupon_new(String, Int32, Int32) -> Coupon
+
+pub fn price_cart(Store, Cart, Coupon?) -> PriceBreakdown?
 
 pub fn product_new(String, String, String, Int32) -> Product
 
@@ -53,11 +65,30 @@ pub struct CartLine {
 pub fn CartLine::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
+pub struct Coupon {
+  code : String
+  off_cents : Int32
+  min_spend_cents : Int32
+}
+pub fn Coupon::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
 pub struct InventoryItem {
   product : Product
   mut stock : Int32
 }
 pub fn InventoryItem::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub struct PriceBreakdown {
+  subtotal : Int32
+  bulk_discount : Int32
+  coupon_code : String?
+  coupon_off : Int32
+  shipping : Int32
+  total : Int32
+}
+pub fn PriceBreakdown::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
 pub struct Product {
