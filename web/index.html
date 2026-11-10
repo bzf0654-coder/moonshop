@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>moonshop · MoonBit 电商演示</title>
+<style>
+  :root { font-size: 19px; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 32px;
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    background: #f5f6fa; color: #222;
+  }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  h1 span { font-size: 0.95rem; color: #667; font-weight: normal; }
+  h2 { font-size: 1.15rem; margin: 0 0 14px; color: #334; }
+  main {
+    display: grid; grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 22px; margin-top: 18px;
+  }
+  section {
+    background: #fff; border: 1px solid #e2e4ec; border-radius: 12px;
+    padding: 20px; min-height: 320px;
+  }
+  .card, .row {
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px dashed #e4e6ef; padding: 12px 2px;
+  }
+  .card > div:first-child { flex: 1; }
+  .cat { color: #889; font-size: 0.85rem; margin-top: 3px; }
+  .price { font-weight: 600; white-space: nowrap; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 9px;
+    border: 1px solid #c8cddd; background: #f0f2f8; padding: 7px 14px;
+  }
+  button:hover { background: #e4e8f4; }
+  .add { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .add:hover { background: #1d4fd8; }
+  .rm { padding: 4px 11px; font-weight: 700; }
+  #checkout {
+    width: 100%; margin-top: 14px; padding: 12px;
+    background: #16a34a; border-color: #16a34a; color: #fff; font-size: 1.05rem;
+  }
+  #checkout:hover { background: #128a3e; }
+  #coupon { width: 100%; margin-top: 10px; }
+  .sum { margin-top: 12px; line-height: 1.75; }
+  .empty { color: #99a; padding: 18px 0; }
+  .ok { color: #16a34a; font-weight: 700; margin-bottom: 10px; }
+  .fail { color: #dc2626; font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid #eceef5; }
+  th { color: #667; font-weight: 600; }
+  .badge {
+    display: inline-block; background: #eef2ff; color: #3730a3;
+    border-radius: 999px; padding: 2px 12px; font-size: 0.85rem; margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+  <h1>🛒 moonshop <span class="badge">MoonBit 驱动</span></h1>
+  <div>纯 MoonBit 电商领域引擎（目录 / 库存 / 定价 / 结账 / 订单）编译为 WebAssembly 时代的 JS 后端直接驱动本页 —— 页面无任何业务 JS。</div>
+  <main>
+    <section>
+      <h2>商品目录</h2>
+      <div id="catalog"></div>
+    </section>
+    <section>
+      <h2>购物车</h2>
+      <div id="cart"></div>
+      <button id="coupon">优惠券 SAVE5000（满 ¥1000 减 ¥50）：已启用</button>
+      <button id="checkout">结账 Checkout</button>
+    </section>
+    <section>
+      <h2>订单小票</h2>
+      <div id="receipt"><div class="empty">下单后这里显示小票</div></div>
+    </section>
+  </main>
+  <script src="./web.js"></script>
+</body>
+</html>

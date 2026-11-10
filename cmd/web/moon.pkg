@@ -1,0 +1,13 @@
+import {
+  "bzf0654-coder/moonshop" @lib,
+}
+
+pkgtype(kind: "executable")
+
+options(
+  targets: {
+    "app.js.mbt": [ "js" ],
+    "ui.js.mbt": [ "js" ],
+    "stub.mbt": [ "wasm", "wasm-gc", "native" ],
+  },
+)

@@ -88,3 +88,14 @@ moon test           # 17 个行为测试
 ## License
 
 Apache-2.0
+
+## 网页版演示
+
+```bash
+moon build --target js
+cp _build/js/debug/build/cmd/web/web.js web/web.js
+python -m http.server 8181   # 仓库根目录执行
+# 浏览器打开 http://127.0.0.1:8181/web/
+```
+
+商品目录、加购/减购、优惠券开关、结账、小票渲染全部由 `cmd/web` 包里的 **MoonBit 代码**驱动（`extern "js"` 只做 DOM 桥接，页面零业务 JS）。
