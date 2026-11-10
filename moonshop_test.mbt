@@ -120,8 +120,12 @@ test "pricing: coupon applies above threshold, not below" {
     None => ()
   }
   inspect(coupon_off, content="2000")
-  inspect(shipping, content="800")
-  inspect(total, content="3800")
+  inspect(shipping, content=(
+    #|1200
+  ))
+  inspect(total, content=(
+    #|4200
+  ))
   let weak = @moonshop.coupon_new("BIG", 2000, 999999)
   match @moonshop.price_cart(store, cart, Some(weak)) {
     Some(b) => inspect(b.coupon_off, content="0")
@@ -138,7 +142,9 @@ test "pricing: coupon capped at basket value, unknown product rejected" {
   match @moonshop.price_cart(store, cart, Some(huge)) {
     Some(b) => {
       inspect(b.coupon_off, content="10000")
-      inspect(b.total, content="800") // shipping only
+      inspect(b.total, content=(
+        #|1200
+      )) // shipping only
     }
     None => inspect("missing", content="REACHED")
   }
@@ -363,5 +369,30 @@ test "catalog and orders round-trip through export/import" {
   match @moonshop.store_checkout(store2, cart2, None) {
     Some(o) => inspect(o.order_no != "MO-000001", content="true")
     None => inspect("no order", content="REACHED")
+  }
+}
+
+///|
+test "member stage and tiered shipping compose with the pipeline" {
+  let store = demo_store()
+  let cart = @moonshop.cart_new()
+  ignore(@moonshop.cart_add(cart, "kb-01", 2)) // 99800
+  match @moonshop.price_cart(store, cart, None, member_off_pct=10) {
+    Some(b) => {
+      inspect(b.member_off, content="9980")
+      inspect(b.bulk_discount, content="0")
+      inspect(b.shipping, content="0")
+      inspect(b.total, content="89820")
+    }
+    None => inspect("missing", content="REACHED")
+  }
+  // tier bands: < ¥49 surcharge, standard band, free band
+  inspect(@moonshop.shipping_fee_for(3000), content="1200")
+  inspect(@moonshop.shipping_fee_for(4900), content="800")
+  inspect(@moonshop.shipping_fee_for(9900), content="0")
+  // clamping: absurd pct capped at 50
+  match @moonshop.price_cart(store, cart, None, member_off_pct=500) {
+    Some(b) => inspect(b.member_off, content="49900")
+    None => inspect("missing", content="REACHED")
   }
 }

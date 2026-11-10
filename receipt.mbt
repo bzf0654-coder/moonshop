@@ -36,6 +36,9 @@ pub fn order_receipt(order : Order) -> String {
   let b = order.breakdown
   buf.write_string("\n")
   buf.write_string("- subtotal: " + format_cents(b.subtotal) + "\n")
+  if b.member_off > 0 {
+    buf.write_string("- member discount: -" + format_cents(b.member_off) + "\n")
+  }
   if b.bulk_discount > 0 {
     buf.write_string(
       "- bulk discount (qty ≥ " + BULK_MIN_QTY.to_string() + "): -" +

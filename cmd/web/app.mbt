@@ -309,6 +309,12 @@ fn render_receipt(order : @lib.Order) -> Unit {
   let b = order.breakdown
   buf.write_string("</table><div class=\"sum\">")
   buf.write_string(t("小计", "Subtotal") + " " + @lib.format_cents(b.subtotal) + "<br/>")
+  if b.member_off > 0 {
+    buf.write_string(
+      t("会员折扣", "Member discount") + " −" +
+      @lib.format_cents(b.member_off) + "<br/>",
+    )
+  }
   if b.bulk_discount > 0 {
     buf.write_string(
       t("批发折扣", "Bulk discount") + " −" +

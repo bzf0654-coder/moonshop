@@ -76,6 +76,7 @@ fn order_to_json(order : Order) -> JsonValue {
     ("order_no", JString(order.order_no)),
     ("lines", JArray(lines)),
     ("subtotal", JNumber(b.subtotal.to_double())),
+    ("member_off", JNumber(b.member_off.to_double())),
     ("bulk_discount", JNumber(b.bulk_discount.to_double())),
     ("rebate_off", JNumber(b.rebate_off.to_double())),
   ]
@@ -165,6 +166,7 @@ fn parse_order_json(item : JsonValue) -> (Order, Int)? {
       let mut order_no = ""
       let lines : Array[OrderLine] = []
       let mut subtotal = 0
+      let mut member_off = 0
       let mut bulk_discount = 0
       let mut rebate_off = 0
       let mut coupon_code : String? = None
@@ -203,6 +205,7 @@ fn parse_order_json(item : JsonValue) -> (Order, Int)? {
               }
             }
           ("subtotal", JNumber(v)) => subtotal = v.to_int()
+          ("member_off", JNumber(v)) => member_off = v.to_int()
           ("bulk_discount", JNumber(v)) => bulk_discount = v.to_int()
           ("rebate_off", JNumber(v)) => rebate_off = v.to_int()
           ("coupon_code", JString(v)) => coupon_code = Some(v)
@@ -224,6 +227,7 @@ fn parse_order_json(item : JsonValue) -> (Order, Int)? {
       }
       let breakdown : PriceBreakdown = {
         subtotal,
+        member_off,
         bulk_discount,
         rebate_off,
         coupon_code,

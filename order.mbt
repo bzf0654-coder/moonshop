@@ -53,7 +53,8 @@ pub fn store_checkout(
   store : Store,
   cart : Cart,
   coupon : Coupon?,
-  rebate? : Rebate
+  rebate? : Rebate,
+  member_off_pct? : Int
 ) -> Order? {
   // validation pass — reject before mutating anything
   for line in cart.lines {
@@ -61,9 +62,11 @@ pub fn store_checkout(
       return None
     }
   }
-  match (match rebate {
-    Some(r) => price_cart(store, cart, coupon, rebate=r)
-    None => price_cart(store, cart, coupon)
+  match (match (rebate, member_off_pct) {
+    (Some(r), Some(pct)) => price_cart(store, cart, coupon, rebate=r, member_off_pct=pct)
+    (Some(r), None) => price_cart(store, cart, coupon, rebate=r)
+    (None, Some(pct)) => price_cart(store, cart, coupon, member_off_pct=pct)
+    (None, None) => price_cart(store, cart, coupon)
   }) {
     Some(breakdown) => {
       // capture snapshot lines

@@ -17,6 +17,33 @@ pub const BULK_MIN_QTY : Int = 3
 pub const BULK_DISCOUNT_PCT : Int = 5
 
 ///|
+// ---------- tiered shipping ----------
+
+/// Orders at or above this amount (post-coupon) ship free.
+pub const SHIPPING_FREE_CENTS : Int = 9900
+
+/// Standard shipping fee for the middle band.
+pub const SHIPPING_STANDARD_CENTS : Int = 800
+
+/// Orders below this amount pay a small-order surcharge instead.
+pub const SHIPPING_SMALL_MAX_CENTS : Int = 4900
+
+/// Surcharge for small orders (heavy handling relative to basket value).
+pub const SHIPPING_SURCHARGE_CENTS : Int = 1200
+
+/// Tiered shipping by post-coupon amount, evaluated top-down:
+/// >= 99 CNY -> free; >= 49 CNY -> standard 8 CNY; else surcharge 12 CNY.
+pub fn shipping_fee_for(amount : Int) -> Int {
+  if amount >= SHIPPING_FREE_CENTS {
+    0
+  } else if amount >= SHIPPING_SMALL_MAX_CENTS {
+    SHIPPING_STANDARD_CENTS
+  } else {
+    SHIPPING_SURCHARGE_CENTS
+  }
+}
+
+///|
 // ---------- coupon ----------
 
 /// A fixed-amount coupon usable when the (post-bulk, post-rebate) subtotal
@@ -58,12 +85,14 @@ pub fn rebate_new(min_spend_cents : Int, off_cents : Int) -> Rebate {
 // ---------- price breakdown ----------
 
 /// The full pricing pipeline result. Stages run in a fixed order:
-/// line totals -> bulk discount -> rebate (满减) -> coupon -> shipping.
-/// `total = subtotal - bulk_discount - rebate_off - coupon_off + shipping`,
-/// always >= 0.
+/// line totals -> member discount -> bulk discount -> rebate (满减)
+/// -> coupon -> tiered shipping.
+/// `total = subtotal - member_off - bulk_discount - rebate_off
+/// - coupon_off + shipping`, always >= 0.
 #derive(Debug)
 pub struct PriceBreakdown {
   subtotal : Int
+  member_off : Int
   bulk_discount : Int
   rebate_off : Int
   coupon_code : String?
@@ -80,7 +109,8 @@ pub fn price_cart(
   store : Store,
   cart : Cart,
   coupon : Coupon?,
-  rebate? : Rebate
+  rebate? : Rebate,
+  member_off_pct? : Int
 ) -> PriceBreakdown? {
   let mut subtotal = 0
   let mut bulk_discount = 0
@@ -96,7 +126,13 @@ pub fn price_cart(
       None => return None
     }
   }
-  let after_bulk = subtotal - bulk_discount
+  // member stage: percent off the goods subtotal, clamped to 0..=50
+  let pct = match member_off_pct {
+    Some(p) => if p < 0 { 0 } else if p > 50 { 50 } else { p }
+    None => 0
+  }
+  let member_off = subtotal * pct / 100
+  let after_bulk = subtotal - member_off - bulk_discount
   // rebate stage: threshold on the post-bulk subtotal, capped
   let mut rebate_off = 0
   match rebate {
@@ -125,14 +161,11 @@ pub fn price_cart(
     None => ()
   }
   let after_coupon = after_rebate - coupon_off
-  let shipping = if after_coupon >= FREE_SHIPPING_THRESHOLD_CENTS {
-    0
-  } else {
-    SHIPPING_FEE_CENTS
-  }
+  let shipping = shipping_fee_for(after_coupon)
   Some(
     {
       subtotal,
+      member_off,
       bulk_discount,
       rebate_off,
       coupon_code,

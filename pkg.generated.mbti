@@ -14,6 +14,14 @@ pub const FREE_SHIPPING_THRESHOLD_CENTS : Int32 = 9900
 
 pub const SHIPPING_FEE_CENTS : Int32 = 800
 
+pub const SHIPPING_FREE_CENTS : Int32 = 9900
+
+pub const SHIPPING_SMALL_MAX_CENTS : Int32 = 4900
+
+pub const SHIPPING_STANDARD_CENTS : Int32 = 800
+
+pub const SHIPPING_SURCHARGE_CENTS : Int32 = 1200
+
 pub fn cart_add(Cart, String, Int32) -> Bool
 
 pub fn cart_is_empty(Cart) -> Bool
@@ -56,17 +64,19 @@ pub fn orders_export_json(Store) -> String
 
 pub fn orders_import_json(Store, String) -> Int32
 
-pub fn price_cart(Store, Cart, Coupon?, rebate? : Rebate) -> PriceBreakdown?
+pub fn price_cart(Store, Cart, Coupon?, rebate? : Rebate, member_off_pct? : Int32) -> PriceBreakdown?
 
 pub fn product_new(String, String, String, Int32, name_en? : String) -> Product
 
 pub fn rebate_new(Int32, Int32) -> Rebate
 
+pub fn shipping_fee_for(Int32) -> Int32
+
 pub fn store_add_product(Store, Product, Int32) -> Unit
 
 pub fn store_categories(Store) -> Array[String]
 
-pub fn store_checkout(Store, Cart, Coupon?, rebate? : Rebate) -> Order?
+pub fn store_checkout(Store, Cart, Coupon?, rebate? : Rebate, member_off_pct? : Int32) -> Order?
 
 pub fn store_decrement(Store, String, Int32) -> Bool
 
@@ -149,6 +159,7 @@ pub fn OrderLine::to_repr(Self) -> @debug.Repr
 #derive(@debug.Debug)
 pub struct PriceBreakdown {
   subtotal : Int32
+  member_off : Int32
   bulk_discount : Int32
   rebate_off : Int32
   coupon_code : String?
