@@ -43,6 +43,13 @@
   }
   .bar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
   a { color: #2563eb; }
+  .login { background: #fff; border: 1px solid #e2e4ec; border-radius: 12px; padding: 16px 20px; line-height: 2; }
+  .ok { color: #16a34a; font-weight: 700; margin-bottom: 10px; }
+  .hint { color: #dc2626; font-size: 0.85rem; }
+  .login input {
+    font: inherit; padding: 6px 10px; border-radius: 9px;
+    border: 1px solid #c8cddd; width: 130px; margin-right: 6px;
+  }
 </style>
 </head>
 <body>
@@ -50,6 +57,7 @@
     <h1>🛠 moonshop 管理台 <span style="font-size:0.9rem;color:#889">与商店共享同一份 MoonBit 引擎与数据</span></h1>
     <a href="/web/">← 返回商店</a>
   </div>
+  <div id="gate"></div>
   <main>
     <section>
       <h2>商品库存</h2>

@@ -63,6 +63,12 @@
   }
   #lang { min-width: 64px; font-weight: 600; }
   #subtitle { color: #556; margin-top: 6px; }
+  .login { margin-bottom: 12px; line-height: 1.9; }
+  .login input {
+    font: inherit; padding: 6px 10px; border-radius: 9px;
+    border: 1px solid #c8cddd; width: 110px; margin-right: 6px;
+  }
+  .hint { color: #dc2626; font-size: 0.85rem; }
 </style>
 </head>
 <body>
@@ -79,6 +85,7 @@
     <section>
       <h2 id="h-cart">购物车</h2>
       <div id="cart"></div>
+      <div id="login"></div>
       <button id="coupon">优惠券 SAVE5000（满 ¥1000 减 ¥50）：已启用</button>
       <button id="rebate">满减活动（满 ¥300 减 ¥30）：参加中</button>
       <button id="checkout">结账 Checkout</button>

@@ -12,13 +12,30 @@ let catalog_json = #|[
 
 let store : @lib.Store = @lib.store_new()
 
+let accounts : @lib.Accounts = @lib.accounts_new()
+
+priv struct AdminState {
+  mut token : String
+}
+
+let state : AdminState = { token: "" }
+
 const ITEMS_KEY : String = "moonshop.items"
 
 const ORDERS_KEY : String = "moonshop.orders"
 
-fn save_state() -> Unit {
+const USERS_KEY : String = "moonshop.users"
+
+const TOKEN_KEY : String = "moonshop.token"
+
+fn save_all() -> Unit {
   @lib.storage_set(ITEMS_KEY, @lib.catalog_export_json(store))
   @lib.storage_set(ORDERS_KEY, @lib.orders_export_json(store))
+  @lib.storage_set(USERS_KEY, @lib.accounts_export_json(accounts))
+}
+
+fn save_state() -> Unit {
+  save_all()
 }
 
 fn restore_or_seed() -> Unit {
@@ -106,10 +123,7 @@ fn parse_qty(text : String) -> Int {
 }
 
 ///|
-fn run_admin() -> Unit {
-  restore_or_seed()
-  render_products()
-  render_ledger()
+fn wire_admin_actions() -> Unit {
   @lib.get_el("restock-btn").on_click(fn() {
     let qty_text = @lib.get_el("restock-qty").get_value()
     let qty = parse_qty(qty_text)
@@ -128,4 +142,65 @@ fn run_admin() -> Unit {
     render_products()
     render_ledger()
   })
+}
+
+/// The gate: admin login form when unauthorized, panels + logout when
+/// an Admin session resolves.
+fn render_gate() -> Unit {
+  match @lib.accounts_require(accounts, state.token, 0, @lib.Admin) {
+    Some(user) => {
+      @lib.get_el("gate").set_html(
+        "<div class=\"ok\">管理员 " + user.username +
+        " 已登录 <button id=\"logout-btn\">退出</button></div>",
+      )
+      @lib.get_el("logout-btn").on_click(fn() {
+        ignore(@lib.accounts_logout(accounts, state.token))
+        state.token = ""
+        @lib.storage_del(TOKEN_KEY)
+        save_all()
+        render_gate()
+      })
+      render_products()
+      render_ledger()
+      wire_admin_actions()
+    }
+    None => {
+      @lib.get_el("gate").set_html(
+        "<div class=\"login\">管理台需要管理员账号登录（内置演示账号 admin / admin123）<br><input id=\"login-user\" placeholder=\"用户名\"><input id=\"login-pass\" type=\"password\" placeholder=\"密码\"><button id=\"login-btn\">登录</button><div id=\"login-msg\" class=\"hint\"></div></div>",
+      )
+      @lib.get_el("login-btn").on_click(fn() {
+        let user = @lib.get_el("login-user").get_value()
+        let pass = @lib.get_el("login-pass").get_value()
+        match @lib.accounts_login(accounts, user, pass, 0) {
+          Some(session) =>
+            match @lib.accounts_require(accounts, session.token, 0, @lib.Admin) {
+              Some(_) => {
+                state.token = session.token
+                @lib.storage_set(TOKEN_KEY, session.token)
+                save_all()
+                render_gate()
+              }
+              None =>
+                @lib.get_el("login-msg").set_html("该账号不是管理员")
+            }
+          None => @lib.get_el("login-msg").set_html("用户名或密码错误")
+        }
+      })
+      @lib.get_el("products").set_html("")
+      @lib.get_el("ledger").set_html("")
+    }
+  }
+}
+
+fn run_admin() -> Unit {
+  restore_or_seed()
+  let saved_users = @lib.storage_get(USERS_KEY)
+  if saved_users != "" {
+    ignore(@lib.accounts_import_json(accounts, saved_users))
+  } else {
+    @lib.accounts_seed_demo(accounts)
+    save_all()
+  }
+  state.token = @lib.storage_get(TOKEN_KEY)
+  render_gate()
 }

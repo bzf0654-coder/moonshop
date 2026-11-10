@@ -411,3 +411,90 @@ pub fn accounts_change_password(
 
 /// Session lifetime in logical ticks (demo default: one "hour").
 pub const SESSION_TTL_TICKS : Int = 3600
+
+///|
+// ---------- persistence ----------
+
+/// Export users (salted hashes only — never plaintext) and live
+/// sessions as JSON for host-side persistence.
+pub fn accounts_export_json(acc : Accounts) -> String {
+  let users : Array[JsonValue] = []
+  for u in acc.users {
+    users.push(
+      JObject(
+        [
+          ("username", JString(u.username)),
+          ("salt", JString(u.salt)),
+          ("hash", JString(u.hash)),
+          ("role", JString(role_label(u.role))),
+        ],
+      ),
+    )
+  }
+  let sessions : Array[JsonValue] = []
+  for s in acc.sessions {
+    sessions.push(
+      JObject(
+        [
+          ("token", JString(s.token)),
+          ("username", JString(s.username)),
+          ("role", JString(role_label(s.role))),
+          ("expires_at", JNumber(s.expires_at.to_double())),
+        ],
+      ),
+    )
+  }
+  json_serialize(
+    JObject([("users", JArray(users)), ("sessions", JArray(sessions))]),
+  )
+}
+
+/// Import previously exported accounts. Returns the number of users
+/// imported; malformed entries and duplicates are skipped.
+pub fn accounts_import_json(acc : Accounts, content : String) -> Int {
+  let mut imported = 0
+  match json_parse(content) {
+    JObject(fields) =>
+      for field in fields {
+        match (field.0, field.1) {
+          ("users", JArray(items)) =>
+            for item in items {
+              match item {
+                JObject(uf) => {
+                  let mut username = ""
+                  let mut salt = ""
+                  let mut hash = ""
+                  let mut role : Role? = None
+                  for f in uf {
+                    match (f.0, f.1) {
+                      ("username", JString(v)) => username = v
+                      ("salt", JString(v)) => salt = v
+                      ("hash", JString(v)) => hash = v
+                      ("role", JString(v)) => role = role_parse(v)
+                      _ => ()
+                    }
+                  }
+                  let ok = username != "" && salt != "" && hash != ""
+                  match (ok, role) {
+                    (true, Some(r)) =>
+                      match accounts_find_user(acc, username) {
+                        Some(_) => ()
+                        None => {
+                          acc.users.push({ username, salt, hash, role: r })
+                          imported = imported + 1
+                        }
+                      }
+                    _ => ()
+                  }
+                }
+                _ => ()
+              }
+            }
+          _ => ()
+        }
+      }
+    _ => ()
+  }
+  acc.seq = acc.seq + imported
+  imported
+}

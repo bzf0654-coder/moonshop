@@ -30,6 +30,10 @@ pub fn accounts_authenticate(Accounts, String, Int32) -> User?
 
 pub fn accounts_change_password(Accounts, String, String, String) -> Bool
 
+pub fn accounts_export_json(Accounts) -> String
+
+pub fn accounts_import_json(Accounts, String) -> Int32
+
 pub fn accounts_login(Accounts, String, String, Int32) -> Session?
 
 pub fn accounts_logout(Accounts, String) -> Bool

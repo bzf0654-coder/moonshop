@@ -13,6 +13,8 @@ let catalog_json = #|[
 
 let store : @lib.Store = @lib.store_new()
 
+let accounts : @lib.Accounts = @lib.accounts_new()
+
 let cart : @lib.Cart = @lib.cart_new()
 
 priv struct WebState {
@@ -20,9 +22,125 @@ priv struct WebState {
   mut rebate_on : Bool
   mut zh : Bool
   mut last_order : @lib.Order?
+  mut token : String
+  mut username : String
+  mut role : String
 }
 
-let state : WebState = { coupon_on: true, rebate_on: true, zh: true, last_order: None }
+let state : WebState = {
+  coupon_on: true,
+  rebate_on: true,
+  zh: true,
+  last_order: None,
+  token: "",
+  username: "",
+  role: "",
+}
+
+const USERS_KEY : String = "moonshop.users"
+
+const TOKEN_KEY : String = "moonshop.token"
+
+fn save_accounts() -> Unit {
+  @lib.storage_set(USERS_KEY, @lib.accounts_export_json(accounts))
+}
+
+fn restore_accounts() -> Unit {
+  let saved = @lib.storage_get(USERS_KEY)
+  if saved != "" {
+    ignore(@lib.accounts_import_json(accounts, saved))
+  } else {
+    @lib.accounts_seed_demo(accounts)
+    save_accounts()
+  }
+}
+
+fn role_display(label : String) -> String {
+  if state.zh {
+    match label {
+      "admin" => "管理员"
+      "staff" => "员工"
+      _ => "顾客"
+    }
+  } else {
+    label
+  }
+}
+
+///|
+// ---------- login ----------
+
+fn render_login() -> Unit {
+  let box = @lib.get_el("login")
+  if state.token == "" {
+    box.set_html(
+      "<div class=\"login\"><input id=\"login-user\" placeholder=\"" +
+      t("用户名", "username") + "\"><input id=\"login-pass\" type=\"password\" placeholder=\"" +
+      t("密码", "password") + "\"><button id=\"login-btn\">" + t("登录", "Sign in") +
+      "</button><button id=\"register-btn\">" + t("注册", "Register") +
+      "</button><div id=\"login-msg\" class=\"hint\"></div></div>",
+    )
+  } else {
+    box.set_html(
+      "<div class=\"login\"><b>" + state.username + "</b> · " +
+      role_display(state.role) + " <button id=\"logout-btn\">" +
+      t("退出", "Sign out") + "</button></div>",
+    )
+  }
+  if state.token == "" {
+    @lib.get_el("login-btn").on_click(fn() {
+      let user = @lib.get_el("login-user").get_value()
+      let pass = @lib.get_el("login-pass").get_value()
+      match @lib.accounts_login(accounts, user, pass, 0) {
+        Some(session) => {
+          state.token = session.token
+          state.username = session.username
+          state.role = @lib.role_label(session.role)
+          @lib.storage_set(TOKEN_KEY, session.token)
+          save_accounts()
+          render_login()
+        }
+        None => @lib.get_el("login-msg").set_html(
+          t("用户名或密码错误", "Wrong username or password")
+        )
+      }
+    })
+    @lib.get_el("register-btn").on_click(fn() {
+      let user = @lib.get_el("login-user").get_value()
+      let pass = @lib.get_el("login-pass").get_value()
+      if @lib.accounts_register(accounts, user, pass, @lib.Customer) {
+        match @lib.accounts_login(accounts, user, pass, 0) {
+          Some(session) => {
+            state.token = session.token
+            state.username = session.username
+            state.role = @lib.role_label(session.role)
+            @lib.storage_set(TOKEN_KEY, session.token)
+            save_accounts()
+            render_login()
+          }
+          None => ()
+        }
+      } else {
+        @lib.get_el("login-msg").set_html(
+          t(
+            "注册失败：用户名≥3位、密码≥6位、不可重复",
+            "Register failed: username >= 3 chars, password >= 6, no duplicates",
+          ),
+        )
+      }
+    })
+  } else {
+    @lib.get_el("logout-btn").on_click(fn() {
+      ignore(@lib.accounts_logout(accounts, state.token))
+      state.token = ""
+      state.username = ""
+      state.role = ""
+      @lib.storage_del(TOKEN_KEY)
+      save_accounts()
+      render_login()
+    })
+  }
+}
 
 /// Current-language text picker.
 fn t(zh : String, en : String) -> String {
@@ -360,12 +478,26 @@ fn render_receipt_view() -> Unit {
 
 fn run() -> Unit {
   restore_or_seed()
+  restore_accounts()
+  // restore a previous session if its token still resolves
+  let saved_token = @lib.storage_get(TOKEN_KEY)
+  if saved_token != "" {
+    match @lib.accounts_authenticate(accounts, saved_token, 0) {
+      Some(user) => {
+        state.token = saved_token
+        state.username = user.username
+        state.role = @lib.role_label(user.role)
+      }
+      None => @lib.storage_del(TOKEN_KEY)
+    }
+  }
   // replay the most recent order into the receipt panel after a restore
   let n = store.orders.length()
   if n > 0 {
     state.last_order = Some(store.orders[n - 1])
   }
   render_shell()
+  render_login()
   render_catalog()
   render_cart()
   render_receipt_view()
@@ -394,6 +526,14 @@ fn run() -> Unit {
     render_cart()
   })
   @lib.get_el("checkout").on_click(fn() {
+    if state.token == "" {
+      @lib.get_el("receipt").set_html(
+        "<div class=\"fail\">" +
+        t("请先登录后再下单", "Please sign in before checkout") +
+        "</div>",
+      )
+      return
+    }
     let placed = match rebate_now() {
       Some(r) => @lib.store_checkout(store, cart, coupon_now(), rebate=r)
       None => @lib.store_checkout(store, cart, coupon_now())
