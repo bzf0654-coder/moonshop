@@ -1,0 +1,48 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bzf0654-coder/moonshop"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn cart_add(Cart, String, Int32) -> Bool
+
+pub fn cart_is_empty(Cart) -> Bool
+
+pub fn cart_new() -> Cart
+
+pub fn cart_remove(Cart, String) -> Bool
+
+pub fn cart_set_qty(Cart, String, Int32) -> Bool
+
+pub fn cart_total_qty(Cart) -> Int32
+
+// Errors
+
+// Types and methods
+#derive(@debug.Debug)
+pub struct Cart {
+  lines : Array[CartLine]
+}
+pub fn Cart::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub struct CartLine {
+  product_id : String
+  mut qty : Int32
+}
+pub fn CartLine::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub struct Product {
+  id : String
+  name : String
+  category : String
+  price_cents : Int32
+}
+pub fn Product::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
