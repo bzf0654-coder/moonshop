@@ -18,6 +18,16 @@ pub struct Product {
 
 pub extend Product with @debug.Debug::{to_repr}
 
+/// Construct a product (id, name, category, unit price in cents).
+pub fn product_new(
+  id : String,
+  name : String,
+  category : String,
+  price_cents : Int
+) -> Product {
+  { id, name, category, price_cents }
+}
+
 /// One line in a shopping cart: `qty` units of a product.
 #derive(Debug)
 pub struct CartLine {

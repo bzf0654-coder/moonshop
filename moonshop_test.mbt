@@ -32,3 +32,35 @@ test "cart set quantity updates, removes at zero, rejects unknown" {
   inspect(@moonshop.cart_set_qty(cart, "ghost", 1), content="false")
   inspect(@moonshop.cart_remove(cart, "ghost"), content="false")
 }
+
+///|
+test "store registers products, merges stock by id" {
+  let store = @moonshop.store_new()
+  @moonshop.store_add_product(store, @moonshop.product_new("kb-01", "Mech Keyboard", "peripherals", 49900), 10)
+  @moonshop.store_add_product(store, @moonshop.product_new("kb-01", "Mech Keyboard", "peripherals", 49900), 5)
+  inspect(@debug.to_string(@moonshop.store_stock(store, "kb-01")), content="Some(15)")
+}
+
+///|
+test "store stock checks and decrement safety" {
+  let store = @moonshop.store_new()
+  @moonshop.store_add_product(store, @moonshop.product_new("m-01", "Mouse", "peripherals", 9900), 3)
+  inspect(@moonshop.store_in_stock(store, "m-01", 3), content="true")
+  inspect(@moonshop.store_in_stock(store, "m-01", 4), content="false")
+  inspect(@moonshop.store_in_stock(store, "ghost", 1), content="false")
+  inspect(@moonshop.store_decrement(store, "m-01", 2), content="true")
+  inspect(@debug.to_string(@moonshop.store_stock(store, "m-01")), content="Some(1)")
+  inspect(@moonshop.store_decrement(store, "m-01", 2), content="false")
+}
+
+///|
+test "store search is case-insensitive across name and category" {
+  let store = @moonshop.store_new()
+  @moonshop.store_add_product(store, @moonshop.product_new("kb-01", "Mech Keyboard", "peripherals", 49900), 1)
+  @moonshop.store_add_product(store, @moonshop.product_new("hd-01", "HDD 4TB", "storage", 59900), 1)
+  @moonshop.store_add_product(store, @moonshop.product_new("sd-01", "SSD 1TB", "storage", 45900), 1)
+  inspect(@moonshop.store_search(store, "KEYBOARD").length(), content="1")
+  inspect(@moonshop.store_search(store, "storage").length(), content="2")
+  inspect(@moonshop.store_search(store, "").length(), content="3")
+  inspect(@moonshop.store_categories(store).length(), content="2")
+}

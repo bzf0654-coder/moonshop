@@ -18,6 +18,24 @@ pub fn cart_set_qty(Cart, String, Int32) -> Bool
 
 pub fn cart_total_qty(Cart) -> Int32
 
+pub fn product_new(String, String, String, Int32) -> Product
+
+pub fn store_add_product(Store, Product, Int32) -> Unit
+
+pub fn store_categories(Store) -> Array[String]
+
+pub fn store_decrement(Store, String, Int32) -> Bool
+
+pub fn store_find(Store, String) -> Product?
+
+pub fn store_in_stock(Store, String, Int32) -> Bool
+
+pub fn store_new() -> Store
+
+pub fn store_search(Store, String) -> Array[Product]
+
+pub fn store_stock(Store, String) -> Int32?
+
 // Errors
 
 // Types and methods
@@ -35,6 +53,13 @@ pub struct CartLine {
 pub fn CartLine::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
+pub struct InventoryItem {
+  product : Product
+  mut stock : Int32
+}
+pub fn InventoryItem::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
 pub struct Product {
   id : String
   name : String
@@ -42,6 +67,12 @@ pub struct Product {
   price_cents : Int32
 }
 pub fn Product::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub struct Store {
+  items : Array[InventoryItem]
+}
+pub fn Store::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
