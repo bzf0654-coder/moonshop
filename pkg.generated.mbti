@@ -12,6 +12,10 @@ pub const BULK_MIN_QTY : Int32 = 3
 
 pub const FREE_SHIPPING_THRESHOLD_CENTS : Int32 = 9900
 
+pub const PASSWORD_ROUNDS : Int32 = 1000
+
+pub const SESSION_TTL_TICKS : Int32 = 3600
+
 pub const SHIPPING_FEE_CENTS : Int32 = 800
 
 pub const SHIPPING_FREE_CENTS : Int32 = 9900
@@ -21,6 +25,22 @@ pub const SHIPPING_SMALL_MAX_CENTS : Int32 = 4900
 pub const SHIPPING_STANDARD_CENTS : Int32 = 800
 
 pub const SHIPPING_SURCHARGE_CENTS : Int32 = 1200
+
+pub fn accounts_authenticate(Accounts, String, Int32) -> User?
+
+pub fn accounts_change_password(Accounts, String, String, String) -> Bool
+
+pub fn accounts_login(Accounts, String, String, Int32) -> Session?
+
+pub fn accounts_logout(Accounts, String) -> Bool
+
+pub fn accounts_new() -> Accounts
+
+pub fn accounts_register(Accounts, String, String, Role) -> Bool
+
+pub fn accounts_require(Accounts, String, Int32, Role) -> User?
+
+pub fn accounts_seed_demo(Accounts) -> Unit
 
 pub fn cart_add(Cart, String, Int32) -> Bool
 
@@ -68,11 +88,23 @@ pub fn orders_export_json(Store) -> String
 
 pub fn orders_import_json(Store, String) -> Int32
 
+pub fn password_hash(String, String) -> String
+
 pub fn price_cart(Store, Cart, Coupon?, rebate? : Rebate, member_off_pct? : Int32) -> PriceBreakdown?
 
 pub fn product_new(String, String, String, Int32, name_en? : String) -> Product
 
 pub fn rebate_new(Int32, Int32) -> Rebate
+
+pub fn role_at_least(Role, Role) -> Bool
+
+pub fn role_label(Role) -> String
+
+pub fn role_parse(String) -> Role?
+
+pub fn sha256_hex(String) -> String
+
+pub fn sha256_hex_rounds(String, Int32) -> String
 
 pub fn shipping_fee_for(Int32) -> Int32
 
@@ -115,6 +147,14 @@ pub fn store_sweep(Store, Int32) -> Int32
 // Errors
 
 // Types and methods
+#derive(@debug.Debug)
+pub struct Accounts {
+  users : Array[User]
+  sessions : Array[Session]
+  mut seq : Int32
+}
+pub fn Accounts::to_repr(Self) -> @debug.Repr
+
 #derive(@debug.Debug)
 pub struct Cart {
   lines : Array[CartLine]
@@ -212,12 +252,38 @@ pub struct Reservation {
 pub fn Reservation::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
+pub(all) enum Role {
+  Customer
+  Staff
+  Admin
+}
+pub fn Role::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub struct Session {
+  token : String
+  username : String
+  role : Role
+  expires_at : Int32
+}
+pub fn Session::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
 pub struct Store {
   items : Array[InventoryItem]
   orders : Array[Order]
   reservations : Array[Reservation]
 }
 pub fn Store::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub struct User {
+  username : String
+  salt : String
+  hash : String
+  role : Role
+}
+pub fn User::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
